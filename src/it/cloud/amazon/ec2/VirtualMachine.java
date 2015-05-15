@@ -86,10 +86,14 @@ public class VirtualMachine {
 	}
 	
 	public static VirtualMachine getVM(String name) throws CloudException {
-		return getVM(name, null);
+		return getVM(name, null, -1);
+	}
+	
+	public static VirtualMachine getVM(String name, String overrideSize) throws CloudException {
+		return getVM(name, overrideSize, -1);
 	}
 
-	public static VirtualMachine getVM(String name, String overrideSize) throws CloudException {
+	public static VirtualMachine getVM(String name, String overrideSize, int overrideInstances) throws CloudException {
 		try {
 			Properties prop = new Properties();
 			prop.load(Configuration.getInputStream(Configuration.CONFIGURATION));
@@ -99,6 +103,8 @@ public class VirtualMachine {
 			if (overrideSize != null)
 				size = overrideSize;
 			String instances = prop.getProperty(name + "_INSTANCES");
+			if (overrideInstances > 0)
+				instances = Integer.valueOf(overrideInstances).toString();
 			String diskSize = prop.getProperty(name + "_DISK");
 			String os = prop.getProperty(name + "_OS");
 			String keyName = prop.getProperty(name + "_KEYPAIR_NAME");
