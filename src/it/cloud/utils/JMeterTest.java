@@ -279,7 +279,7 @@ public class JMeterTest {
 		return null;
 	}
 	
-	public static void runTest(CloudService service, String propertiesFile, String... otherSubstitutions) throws Exception {
+	public static void runTest(CloudService service, String propertiesFile, Object... otherSubstitutions) throws Exception {
 		Properties prop = new Properties();
 		InputStream is = new FileInputStream(propertiesFile);
 		prop.load(is);
@@ -290,7 +290,7 @@ public class JMeterTest {
 		String remotePath = prop.getProperty("REMOTE_PATH");
 		String jmeterPath = prop.getProperty("JMETER_PATH");
 		String data = prop.getProperty("DATA_FILE");
-		ArrayList<String> substitutions = new ArrayList<String>();
+		ArrayList<Object> substitutions = new ArrayList<Object>();
 		{
 			int i = 0;
 			for (String tmp = prop.getProperty("SUBSTITUTION" + i); tmp != null; ++i, tmp = prop.getProperty("SUBSTITUTION" + i))
