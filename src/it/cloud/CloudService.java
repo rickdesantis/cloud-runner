@@ -1,6 +1,6 @@
 package it.cloud;
 
-import it.cloud.amazon.ec2.VirtualMachine;
+import it.cloud.amazon.ec2.AmazonEC2;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ public interface CloudService {
 		case "amazon":
 		case "ec2":
 		case "aws-ec2":
-			return VirtualMachine.class;
+			return AmazonEC2.class;
 		}
 		return null;
 	}

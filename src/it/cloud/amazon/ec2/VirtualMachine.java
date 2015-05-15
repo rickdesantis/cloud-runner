@@ -1,6 +1,5 @@
 package it.cloud.amazon.ec2;
 
-import it.cloud.CloudService;
 import it.cloud.utils.CloudException;
 import it.cloud.utils.Ssh;
 
@@ -47,7 +46,7 @@ import com.amazonaws.services.ec2.model.SpotInstanceRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.util.Base64;
 
-public class VirtualMachine implements CloudService {
+public class VirtualMachine {
 
 	private static final Logger logger = LoggerFactory.getLogger(VirtualMachine.class);
 
@@ -85,14 +84,20 @@ public class VirtualMachine implements CloudService {
 	public String getParameter(String name) {
 		return otherParams.get(name);
 	}
-
+	
 	public static VirtualMachine getVM(String name) throws CloudException {
+		return getVM(name, null);
+	}
+
+	public static VirtualMachine getVM(String name, String overrideSize) throws CloudException {
 		try {
 			Properties prop = new Properties();
 			prop.load(Configuration.getInputStream(Configuration.CONFIGURATION));
 
 			String ami = prop.getProperty(name + "_AMI");
 			String size = prop.getProperty(name + "_SIZE");
+			if (overrideSize != null)
+				size = overrideSize;
 			String instances = prop.getProperty(name + "_INSTANCES");
 			String diskSize = prop.getProperty(name + "_DISK");
 			String os = prop.getProperty(name + "_OS");
@@ -670,18 +675,6 @@ public class VirtualMachine implements CloudService {
 					return i;
 			return ERROR;
 		}
-	}
-
-	@Override
-	public List<it.cloud.Instance> getRunningMachinesByImageId(String imageId) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public List<it.cloud.Instance> startMachines(int n, String imageId) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 }
