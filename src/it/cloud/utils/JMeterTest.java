@@ -167,7 +167,6 @@ public class JMeterTest {
 	
 	public static class RunInstance {
 		public File jmx = null;
-		public String newfolder = null;
 		public List<String> fileToBeSent = new ArrayList<String>();
 		public List<String> fileToBeGet = new ArrayList<String>();
 	}
@@ -177,16 +176,12 @@ public class JMeterTest {
 		
 		Date date = new Date();
 		String startTime = String.valueOf(date.getTime());
-		String now = String.format("%tm%<td%<tH%<tM", date);
-		String testName = "t" + now;
-		String newfolder = "logs/logs-" + now;
-		String log_table = String.format("%s/%s/test_table.jtl", remotePathTest, newfolder);
-		String log_tree = String.format("%s/%s/test_tree.jtl", remotePathTest, newfolder);
-		String log_aggregate = String.format("%s/%s/test_aggregate.jtl", remotePathTest, newfolder);
-		String log_graph = String.format("%s/%s/test_graph.jtl", remotePathTest, newfolder);
-		String log_tps = String.format("%s/%s/test_tps.jtl", remotePathTest, newfolder);
-		
-		res.newfolder = newfolder;
+		String testName = "test";
+		String log_table = String.format("%s/test_table.jtl", remotePathTest);
+		String log_tree = String.format("%s/test_tree.jtl", remotePathTest);
+		String log_aggregate = String.format("%s/test_aggregate.jtl", remotePathTest);
+		String log_graph = String.format("%s/test_graph.jtl", remotePathTest);
+		String log_tps = String.format("%s/test_tps.jtl", remotePathTest);
 		
 		res.fileToBeGet.add("test_table.jtl");
 		res.fileToBeGet.add("test_tree.jtl");
@@ -368,10 +363,10 @@ public class JMeterTest {
 			throw new RuntimeException("All the parameters are important and they cannot be null.");
 		
 		for (Instance i : runningInstances) {
-			Ssh.exec(i, String.format("mkdir -p %s/%s", remotePath, run.newfolder));
+			Ssh.exec(i, String.format("mkdir -p %s/%s", remotePath));
 			Ssh.sendFile(i, run.jmx.toString(), Paths.get(remotePath, run.jmx.getName()).toString());
 			for (String s : run.fileToBeSent)
-				Ssh.sendFile(i, Paths.get(localPath, run.newfolder, s).toString(), Paths.get(remotePath, run.newfolder, s).toString());
+				Ssh.sendFile(i, Paths.get(localPath, s).toString(), Paths.get(remotePath, s).toString());
 		}
 		
 		for (Instance i : runningInstances)
@@ -379,7 +374,7 @@ public class JMeterTest {
 		
 		for (Instance i : runningInstances) {
 			for (String s : run.fileToBeGet)
-				Ssh.receiveFile(i, Paths.get(localPath, run.newfolder, s).toString(), Paths.get(remotePath, run.newfolder, s).toString());
+				Ssh.receiveFile(i, Paths.get(localPath, s).toString(), Paths.get(remotePath, s).toString());
 		}
 		
 	}
