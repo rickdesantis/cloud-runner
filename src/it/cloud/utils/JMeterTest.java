@@ -333,16 +333,20 @@ public class JMeterTest {
 		return createModifiedFile(baseJmx, localPath, remotePath, data, clients, substitutions);
 	}
 	
-	public void runTest(CloudService service, RunInstance run) throws Exception {
-		runTest(service, run, clientImageId, clients, localPath, remotePath, jmeterPath);
+	public List<Instance> startInstancesForTest(CloudService service, RunInstance run) throws Exception {
+		return startInstancesForTest(service, clientImageId, clients);
 	}
 	
-	public static void runTest(CloudService service, RunInstance run, String clientImageId, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
+	public void performTest(List<Instance> runningInstances, RunInstance run) throws Exception {
+		performTest(runningInstances, run, clients, localPath, remotePath, jmeterPath);
+	}
+	
+	public static List<Instance> startInstancesForTest(CloudService service, String clientImageId, int clients) throws Exception {
 		if (clients <= 0)
 			throw new RuntimeException("You need to use at least 1 client!");
 		
-		if (clientImageId == null || localPath == null || remotePath == null || jmeterPath == null)
-			throw new RuntimeException("Malformed properties file. Check it out.");
+		if (clientImageId == null)
+			throw new RuntimeException("The image id cannot be null!");
 		
 		List<Instance> runningInstances = service.getRunningMachinesByImageId(clientImageId);
 		if (runningInstances.size() < clients)
@@ -351,6 +355,17 @@ public class JMeterTest {
 			while (runningInstances.size() > clients)
 				runningInstances.remove(runningInstances.size() - 1);
 		}
+		
+		return runningInstances;
+		
+	}
+	
+	public static void performTest(List<Instance> runningInstances, RunInstance run, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
+		if (runningInstances.size() != clients)
+			throw new RuntimeException("You aren't using the exact number of running instances! (" + runningInstances.size() + " vs " + clients + ")");
+		
+		if (localPath == null || remotePath == null || jmeterPath == null)
+			throw new RuntimeException("All the parameters are important and they cannot be null.");
 		
 		for (Instance i : runningInstances) {
 			Ssh.exec(i, String.format("mkdir -p %s/%s", remotePath, run.newfolder));
