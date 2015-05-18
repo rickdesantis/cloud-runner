@@ -363,14 +363,14 @@ public class JMeterTest {
 			throw new RuntimeException("All the parameters are important and they cannot be null.");
 		
 		for (Instance i : runningInstances) {
-			Ssh.exec(i, String.format("mkdir -p %s/%s", remotePath));
+			Ssh.exec(i, String.format("mkdir -p %s", remotePath));
 			Ssh.sendFile(i, run.jmx.toString(), Paths.get(remotePath, run.jmx.getName()).toString());
 			for (String s : run.fileToBeSent)
 				Ssh.sendFile(i, Paths.get(localPath, s).toString(), Paths.get(remotePath, s).toString());
 		}
 		
 		for (Instance i : runningInstances)
-			Ssh.exec(i, String.format("%s/bin/jmeter -n -t %s/tests/%s", jmeterPath, remotePath, run.jmx.getName()));
+			Ssh.exec(i, String.format("%s/bin/jmeter -n -t %s/%s", jmeterPath, remotePath, run.jmx.getName()));
 		
 		for (Instance i : runningInstances) {
 			for (String s : run.fileToBeGet)
