@@ -56,7 +56,7 @@ public class JMeterTest {
 	
 	private static DecimalFormat nameFormatter = nameFormatter(10);
 	
-	public static void considerDataFile(Document doc, Path data, int clients) throws IOException {
+	private static void considerDataFile(Document doc, Path data, int clients) throws IOException {
 		final String ultimateThreadGroup = "kg.apc.jmeter.threads.UltimateThreadGroup";
 		final String variableThroughputTimer = "kg.apc.jmeter.timers.VariableThroughputTimer";
 		
@@ -279,18 +279,44 @@ public class JMeterTest {
 		return null;
 	}
 	
-	public static void runTest(CloudService service, String propertiesFile, Object... otherSubstitutions) throws Exception {
+	private String clientImageId;
+	private int clients;
+	private String localPath;
+	private String remotePath;
+	private String jmeterPath;
+	private String data;
+	private ArrayList<Object> substitutions;
+	
+	public JMeterTest(String clientImageId, int clients, String localPath, String remotePath, String jmeterPath, String data, Object... substitutions) {
+		this.clientImageId = clientImageId;
+		this.clients = clients;
+		this.localPath = localPath;
+		this.remotePath = remotePath;
+		this.jmeterPath = jmeterPath;
+		this.data = data;
+		this.substitutions = new ArrayList<Object>();
+		for (Object o : substitutions)
+			this.substitutions.add(o);
+		
+		if (clients <= 0)
+			throw new RuntimeException("You need to use at least 1 client!");
+		
+		if (clientImageId == null || localPath == null || remotePath == null || jmeterPath == null || data == null)
+			throw new RuntimeException("All the parameters are important and they cannot be null.");
+	}
+	
+	public JMeterTest(String propertiesFile) throws Exception {
 		Properties prop = new Properties();
 		InputStream is = new FileInputStream(propertiesFile);
 		prop.load(is);
 		
-		String clientImageId = prop.getProperty("CLIENT_IMAGE_ID");
-		int clients = Integer.parseInt(prop.getProperty("CLIENTS", "1"));
-		String localPath = prop.getProperty("LOCAL_PATH");
-		String remotePath = prop.getProperty("REMOTE_PATH");
-		String jmeterPath = prop.getProperty("JMETER_PATH");
-		String data = prop.getProperty("DATA_FILE");
-		ArrayList<Object> substitutions = new ArrayList<Object>();
+		clientImageId = prop.getProperty("CLIENT_IMAGE_ID");
+		clients = Integer.parseInt(prop.getProperty("CLIENTS", "1"));
+		localPath = prop.getProperty("LOCAL_PATH");
+		remotePath = prop.getProperty("REMOTE_PATH");
+		jmeterPath = prop.getProperty("JMETER_PATH");
+		data = prop.getProperty("DATA_FILE");
+		substitutions = new ArrayList<Object>();
 		{
 			int i = 0;
 			for (String tmp = prop.getProperty("SUBSTITUTION" + i); tmp != null; ++i, tmp = prop.getProperty("SUBSTITUTION" + i))
@@ -298,11 +324,41 @@ public class JMeterTest {
 		}
 		is.close();
 		
-		for (int i = 0; i < otherSubstitutions.length; ++i)
-			substitutions.add(otherSubstitutions[i]);
-		
 		if (clients <= 0)
 			throw new RuntimeException("You need to use at least 1 client!");
+		
+		if (clientImageId == null || localPath == null || remotePath == null || jmeterPath == null || data == null)
+			throw new RuntimeException("Malformed properties file. Check it out.");
+	}
+	
+	public RunInstance createModifiedFile() throws Exception {
+		return createModifiedFile(localPath, remotePath, data, clients, substitutions);
+	}
+	
+	public void runTest(CloudService service, RunInstance run) throws Exception {
+		runTest(service, run, clientImageId, clients, localPath, remotePath, jmeterPath);
+	}
+	
+	public static void runTest(CloudService service, String clientImageId, int clients, String localPath, String remotePath, String jmeterPath, String data, Object... substitutions) throws Exception {
+		JMeterTest test = new JMeterTest(clientImageId, clients, localPath, remotePath, jmeterPath, data, substitutions);
+		
+		RunInstance run = test.createModifiedFile();
+		test.runTest(service, run);
+	}
+	
+	public static void runTest(CloudService service, String propertiesFile) throws Exception {
+		JMeterTest test = new JMeterTest(propertiesFile);
+		
+		RunInstance run = test.createModifiedFile();
+		test.runTest(service, run);
+	}
+	
+	public static void runTest(CloudService service, RunInstance run, String clientImageId, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
+		if (clients <= 0)
+			throw new RuntimeException("You need to use at least 1 client!");
+		
+		if (clientImageId == null || localPath == null || remotePath == null || jmeterPath == null)
+			throw new RuntimeException("Malformed properties file. Check it out.");
 		
 		List<Instance> runningInstances = service.getRunningMachinesByImageId(clientImageId);
 		if (runningInstances.size() < clients)
@@ -311,8 +367,6 @@ public class JMeterTest {
 			while (runningInstances.size() > clients)
 				runningInstances.remove(runningInstances.size() - 1);
 		}
-		
-		RunInstance run = createModifiedFile(localPath, remotePath, data, clients, substitutions);
 		
 		for (Instance i : runningInstances) {
 			Ssh.exec(i, String.format("mkdir -p %s/%s", remotePath, run.newfolder));
