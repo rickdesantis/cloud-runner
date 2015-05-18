@@ -40,8 +40,6 @@ public class JMeterTest {
 	
 	private static final Logger logger = LoggerFactory.getLogger(JMeterTest.class);
 	
-	public static final String DEFAULT_JMX = "";
-	
 	private static DecimalFormat nameFormatter(int chars) {
 		if (chars <= 0)
 			throw new RuntimeException("You need at least one char.");
@@ -174,7 +172,7 @@ public class JMeterTest {
 		public List<String> fileToBeGet = new ArrayList<String>();
 	}
 
-	public static RunInstance createModifiedFile(String localPathTest, String remotePathTest, String dataFile, int clients, Object... substitutions) {
+	public static RunInstance createModifiedFile(Path baseJmx, String localPathTest, String remotePathTest, String dataFile, int clients, Object... substitutions) {
 		RunInstance res = new RunInstance();
 		
 		Date date = new Date();
@@ -197,7 +195,7 @@ public class JMeterTest {
 		res.fileToBeGet.add("test_tps.jtl");
 
 		try {
-			File fXmlFile = Paths.get(localPathTest, DEFAULT_JMX).toFile();
+			File fXmlFile = baseJmx.toFile();
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory
 					.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
@@ -331,26 +329,12 @@ public class JMeterTest {
 			throw new RuntimeException("Malformed properties file. Check it out.");
 	}
 	
-	public RunInstance createModifiedFile() throws Exception {
-		return createModifiedFile(localPath, remotePath, data, clients, substitutions);
+	public RunInstance createModifiedFile(Path baseJmx) throws Exception {
+		return createModifiedFile(baseJmx, localPath, remotePath, data, clients, substitutions);
 	}
 	
 	public void runTest(CloudService service, RunInstance run) throws Exception {
 		runTest(service, run, clientImageId, clients, localPath, remotePath, jmeterPath);
-	}
-	
-	public static void runTest(CloudService service, String clientImageId, int clients, String localPath, String remotePath, String jmeterPath, String data, Object... substitutions) throws Exception {
-		JMeterTest test = new JMeterTest(clientImageId, clients, localPath, remotePath, jmeterPath, data, substitutions);
-		
-		RunInstance run = test.createModifiedFile();
-		test.runTest(service, run);
-	}
-	
-	public static void runTest(CloudService service, String propertiesFile) throws Exception {
-		JMeterTest test = new JMeterTest(propertiesFile);
-		
-		RunInstance run = test.createModifiedFile();
-		test.runTest(service, run);
 	}
 	
 	public static void runTest(CloudService service, RunInstance run, String clientImageId, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
