@@ -337,7 +337,7 @@ public class JMeterTest {
 		return startInstancesForTest(service, clientImageId, clients);
 	}
 	
-	public void performTest(List<Instance> runningInstances, RunInstance run) throws Exception {
+	public void performTest(List<? extends Instance> runningInstances, RunInstance run) throws Exception {
 		performTest(runningInstances, run, clients, localPath, remotePath, jmeterPath);
 	}
 	
@@ -360,7 +360,7 @@ public class JMeterTest {
 		
 	}
 	
-	public static void performTest(List<Instance> runningInstances, RunInstance run, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
+	public static void performTest(List<? extends Instance> runningInstances, RunInstance run, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
 		if (runningInstances.size() != clients)
 			throw new RuntimeException("You aren't using the exact number of running instances! (" + runningInstances.size() + " vs " + clients + ")");
 		
