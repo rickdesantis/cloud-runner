@@ -63,8 +63,9 @@ public class Configuration {
 		Properties prop = new Properties();
 		
 		prop.put("REGION", REGION);
+		prop.put("SECURITY_GROUP_NAME", SECURITY_GROUP_NAME);
 		
-		prop.store(fos, "HadoopNN configuration properties");
+		prop.store(fos, "CloudRunner configuration properties");
 		fos.flush();
 	}
 	
@@ -74,6 +75,7 @@ public class Configuration {
 		prop.load(is);
 		
 		REGION = prop.getProperty("REGION", REGION);
+		SECURITY_GROUP_NAME = prop.getProperty("SECURITY_GROUP_NAME", SECURITY_GROUP_NAME);
 	}
 	
 	public static List<String> checkValidity() {

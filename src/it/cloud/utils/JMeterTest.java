@@ -209,7 +209,7 @@ public class JMeterTest {
 				xpathNode = (Node) xpath.evaluate(expression, doc,
 						XPathConstants.NODE);
 				xpathNode.setTextContent(log_tree);
-				expression = "//ResultCollector[@guiclass='StatVisualizer']/stringProp";
+				expression = "//ResultCollector[@guiclass='StatGraphVisualizer']/stringProp";
 				xpathNode = (Node) xpath.evaluate(expression, doc,
 						XPathConstants.NODE);
 				xpathNode.setTextContent(log_aggregate);

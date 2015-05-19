@@ -27,6 +27,7 @@ import com.amazonaws.services.ec2.model.AvailabilityZone;
 import com.amazonaws.services.ec2.model.BlockDeviceMapping;
 import com.amazonaws.services.ec2.model.CancelSpotInstanceRequestsRequest;
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest;
+import com.amazonaws.services.ec2.model.CreateTagsRequest;
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesRequest;
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 import com.amazonaws.services.ec2.model.DescribeInstanceStatusRequest;
@@ -40,9 +41,11 @@ import com.amazonaws.services.ec2.model.DescribeSpotPriceHistoryResult;
 import com.amazonaws.services.ec2.model.EbsBlockDevice;
 import com.amazonaws.services.ec2.model.IpPermission;
 import com.amazonaws.services.ec2.model.LaunchSpecification;
+import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.RequestSpotInstancesRequest;
 import com.amazonaws.services.ec2.model.RequestSpotInstancesResult;
 import com.amazonaws.services.ec2.model.SpotInstanceRequest;
+import com.amazonaws.services.ec2.model.Tag;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.util.Base64;
 
@@ -50,7 +53,7 @@ public class VirtualMachine {
 
 	private static final Logger logger = LoggerFactory.getLogger(VirtualMachine.class);
 
-	public static final double PRICE_MARGIN = 0.2;
+	public static double PRICE_MARGIN = 0.2;
 
 	private static AmazonEC2 client = null;
 
@@ -392,6 +395,15 @@ public class VirtualMachine {
 
 		return true;
 	}
+	
+	public void setNameToInstances() {
+		setNameToInstances(name);
+	}
+	
+	public void setNameToInstances(String name) {
+		for (Instance i : instancesSet)
+			i.setName(name);
+	}
 
 	public void terminateAllSpots() {
 		if (instancesSet.size() == 0)
@@ -452,6 +464,28 @@ public class VirtualMachine {
 
 		public void sendFile(String lfile, String rfile) throws Exception {
 			Ssh.sendFile(this, lfile, rfile);
+		}
+		
+		public void reboot() {
+			RebootInstancesRequest req = new RebootInstancesRequest();
+			List<String> instanceIds = new ArrayList<String>();
+			instanceIds.add(id);
+			req.setInstanceIds(instanceIds);
+
+			client.rebootInstances(req);
+		}
+		
+		public void setName(String name) {
+			CreateTagsRequest req = new CreateTagsRequest();
+			List<String> instanceIds = new ArrayList<String>();
+			instanceIds.add(id);
+			req.withResources(instanceIds);
+			
+			List<Tag> tags = new ArrayList<Tag>();
+			tags.add(new Tag("Name", name));
+			req.setTags(tags);
+			
+			client.createTags(req);
 		}
 
 		private Instance(VirtualMachine vm, String id, String spotRequestId) {
