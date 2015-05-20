@@ -5,6 +5,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -56,6 +59,22 @@ public class Configuration {
 		if (is == null)
 			is = Configuration.class.getResourceAsStream("/" + filePath);
 		return is;
+	}
+	
+	public static Path getPathToFile(String filePath) {
+		File f = new File(filePath);
+		if (f.exists())
+			try {
+				return f.toPath();
+			} catch (Exception e) { }
+		
+		URL url = Configuration.class.getResource(filePath);
+		if (url == null)
+			url = Configuration.class.getResource("/" + filePath);
+		if (url == null)
+			return null;
+		else
+			return Paths.get(url.getPath());
 	}
 	
 	public static void saveConfiguration(String filePath) throws IOException {

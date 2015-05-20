@@ -7,6 +7,8 @@ import java.util.List;
 public interface CloudService {
 	public List<Instance> getRunningMachinesByImageId(String imageId);
 	public List<Instance> startMachines(int n, String imageId);
+	public void addRunningInstances(VirtualMachine vm);
+	public String getVMNameByImageId(String imageId);
 	
 	public static Class<? extends CloudService> getByName(String name) {
 		switch (name) {

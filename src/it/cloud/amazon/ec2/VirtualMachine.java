@@ -3,10 +3,8 @@ package it.cloud.amazon.ec2;
 import it.cloud.utils.CloudException;
 import it.cloud.utils.Ssh;
 
-import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.PrintWriter;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,44 +16,33 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2Client;
-import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest;
-import com.amazonaws.services.ec2.model.AvailabilityZone;
 import com.amazonaws.services.ec2.model.BlockDeviceMapping;
 import com.amazonaws.services.ec2.model.CancelSpotInstanceRequestsRequest;
-import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest;
 import com.amazonaws.services.ec2.model.CreateTagsRequest;
-import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesRequest;
-import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 import com.amazonaws.services.ec2.model.DescribeInstanceStatusRequest;
 import com.amazonaws.services.ec2.model.DescribeInstanceStatusResult;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.DescribeSpotInstanceRequestsRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotInstanceRequestsResult;
-import com.amazonaws.services.ec2.model.DescribeSpotPriceHistoryRequest;
-import com.amazonaws.services.ec2.model.DescribeSpotPriceHistoryResult;
 import com.amazonaws.services.ec2.model.EbsBlockDevice;
-import com.amazonaws.services.ec2.model.IpPermission;
 import com.amazonaws.services.ec2.model.LaunchSpecification;
 import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.RequestSpotInstancesRequest;
 import com.amazonaws.services.ec2.model.RequestSpotInstancesResult;
+import com.amazonaws.services.ec2.model.Reservation;
+import com.amazonaws.services.ec2.model.RunInstancesRequest;
+import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.SpotInstanceRequest;
 import com.amazonaws.services.ec2.model.Tag;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.util.Base64;
 
-public class VirtualMachine {
+public class VirtualMachine implements it.cloud.VirtualMachine {
 
 	private static final Logger logger = LoggerFactory.getLogger(VirtualMachine.class);
 
 	public static double PRICE_MARGIN = 0.2;
-
-	private static AmazonEC2 client = null;
 
 	private String ami;
 	private int instances;
@@ -68,6 +55,26 @@ public class VirtualMachine {
 	private String os;
 	private String keyName;
 	private List<Instance> instancesSet;
+	
+	@Override
+	public int getInstancesNeeded() {
+		return instances;
+	}
+	
+	@Override
+	public int getInstancesRunning() {
+		return instancesSet.size();
+	}
+	
+	@Override
+	public String getSize() {
+		return size;
+	}
+	
+	@Override
+	public String getImageId() {
+		return ami;
+	}
 
 	private Map<String, String> otherParams;
 
@@ -126,7 +133,7 @@ public class VirtualMachine {
 			if (ami != null && size != null && instances != null
 					&& diskSize != null && os != null && keyName != null
 					&& sshUser != null && sshPassword != null) {
-				double[] pricesInRegion = getPricesInRegion(size, os);
+				double[] pricesInRegion = AmazonEC2.getPricesInRegion(size, os);
 				if (pricesInRegion.length == 0)
 					return null;
 				double maxPrice = pricesInRegion[0];
@@ -159,8 +166,6 @@ public class VirtualMachine {
 		if (instances <= 0 || diskSize <= 0)
 			throw new CloudException(
 					"There's some error in your configuration, aborting.");
-
-		connect();
 
 		this.ami = ami;
 		this.instances = instances;
@@ -198,136 +203,19 @@ public class VirtualMachine {
 
 	}
 
-	private static List<FirewallRule> firewallRules;
-	static {
-		firewallRules = new ArrayList<FirewallRule>();
-
-		try (Scanner sc = new Scanner(
-				Configuration.getInputStream(Configuration.FIREWALL_RULES));) {
-			if (sc.hasNextLine())
-				sc.nextLine();
-
-			while (sc.hasNextLine()) {
-				String line = sc.nextLine();
-				String[] fields = line.split(",");
-				try {
-					firewallRules.add(new FirewallRule(fields[0], Integer
-							.valueOf(fields[1]), Integer.valueOf(fields[2]),
-							fields[3]));
-				} catch (Exception e) {
-				}
-			}
-		}
-
-		createSecurityGroup();
-	}
-
-	public static AmazonEC2 connect() {
-		if (client == null) {
-			Region r = Region.getRegion(Regions.fromName(Configuration.REGION));
-
-			client = new AmazonEC2Client(Configuration.AWS_CREDENTIALS);
-			client.setRegion(r);
-		}
-		return client;
-	}
-
-	private static void createSecurityGroup() {
-		if (Paths.get(Configuration.SECURITY_GROUP_FILE_NAME).toFile().exists())
-			return;
-
-		connect();
-
-		try {
-			CreateSecurityGroupRequest securityGroupRequest = new CreateSecurityGroupRequest(
-					Configuration.SECURITY_GROUP_NAME,
-					Configuration.SECURITY_GROUP_DESC);
-			client.createSecurityGroup(securityGroupRequest);
-		} catch (AmazonServiceException e) {
-			logger.error(
-					"Error while creating the security group: it probably already exists.",
-					e);
-		}
-
-		ArrayList<IpPermission> ipPermissions = new ArrayList<IpPermission>();
-
-		for (FirewallRule rule : firewallRules) {
-			IpPermission ipPermission = new IpPermission();
-			ipPermission.setIpProtocol(rule.protocol);
-			ipPermission.setFromPort(new Integer(rule.from));
-			ipPermission.setToPort(new Integer(rule.to));
-			ArrayList<String> ipRanges = new ArrayList<String>();
-			ipRanges.add(rule.ip);
-			ipPermission.setIpRanges(ipRanges);
-			ipPermissions.add(ipPermission);
-		}
-
-		try {
-			AuthorizeSecurityGroupIngressRequest ingressRequest = new AuthorizeSecurityGroupIngressRequest(
-					Configuration.SECURITY_GROUP_NAME, ipPermissions);
-			client.authorizeSecurityGroupIngress(ingressRequest);
-		} catch (AmazonServiceException e) {
-			logger.error(
-					"Error while setting the security group: it probably was already set.",
-					e);
-		}
-
-		try (PrintWriter out = new PrintWriter(new FileOutputStream(Paths.get(
-				Configuration.SECURITY_GROUP_FILE_NAME).toFile()));) {
-			out.println("done");
-		} catch (Exception e) {
-			logger.error("Error while creating the file.", e);
-		}
-	}
-
-	public static double[] getPricesInRegion(String size, String os) {
-		connect();
-
-		DescribeAvailabilityZonesRequest availabilityZoneReq = new DescribeAvailabilityZonesRequest();
-		DescribeAvailabilityZonesResult result = client
-				.describeAvailabilityZones(availabilityZoneReq);
-		List<AvailabilityZone> availabilityZones = result
-				.getAvailabilityZones();
-
-		double res[] = new double[availabilityZones.size()];
-		int i = 0;
-
-		for (AvailabilityZone zone : availabilityZones) {
-			DescribeSpotPriceHistoryRequest req = new DescribeSpotPriceHistoryRequest();
-
-			List<String> instanceTypes = new ArrayList<String>();
-			instanceTypes.add(size);
-			req.setInstanceTypes(instanceTypes);
-
-			List<String> productDescriptions = new ArrayList<String>();
-			productDescriptions.add(os);
-			req.setProductDescriptions(productDescriptions);
-
-			req.setAvailabilityZone(zone.getZoneName());
-
-			req.setMaxResults(1);
-
-			DescribeSpotPriceHistoryResult priceResult = client
-					.describeSpotPriceHistory(req);
-			res[i] = Double.parseDouble(priceResult.getSpotPriceHistory()
-					.get(0).getSpotPrice());
-
-			logger.debug("Zone: {}, Price: {}", zone.getZoneName(),
-					(float) res[i]);
-
-			i++;
-		}
-
-		return res;
-	}
-
 	public void spotRequest() {
-		connect();
+		if (instances <= instancesSet.size()) {
+			logger.info("No more instances will be launched because there are already enough.");
+			return;
+		}
+		
+		com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 		RequestSpotInstancesRequest requestRequest = new RequestSpotInstancesRequest();
 
 		requestRequest.setSpotPrice(Double.valueOf(maxPrice).toString());
-		requestRequest.setInstanceCount(instances);
+//		requestRequest.setInstanceCount(instances);
+		requestRequest.setInstanceCount(instances - instancesSet.size());
 
 		LaunchSpecification launchSpecification = new LaunchSpecification();
 		launchSpecification.setImageId(ami);
@@ -365,6 +253,54 @@ public class VirtualMachine {
 		for (SpotInstanceRequest req : reqs)
 			instancesSet.add(new Instance(this, req.getInstanceId(), req
 					.getSpotInstanceRequestId()));
+	}
+	
+	public void onDemandRequest() {
+		if (instances <= instancesSet.size()) {
+			logger.info("No more instances will be launched because there are already enough.");
+			return;
+		}
+		
+		com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
+
+		RunInstancesRequest request = new RunInstancesRequest();
+		
+//		request.setMinCount(instances);
+//		request.setMaxCount(instances);
+		request.setMinCount(instances - instancesSet.size());
+		request.setMaxCount(instances - instancesSet.size());
+		request.setImageId(ami);
+		request.setInstanceType(size);
+		if (userData != null)
+			request.setUserData(Base64.encodeAsString(userData
+					.getBytes()));
+
+		BlockDeviceMapping blockDeviceMapping = new BlockDeviceMapping();
+		blockDeviceMapping.setDeviceName("/dev/sda1");
+
+		EbsBlockDevice ebs = new EbsBlockDevice();
+		ebs.setDeleteOnTermination(Boolean.TRUE);
+		ebs.setVolumeSize(diskSize);
+		blockDeviceMapping.setEbs(ebs);
+
+		ArrayList<BlockDeviceMapping> blockList = new ArrayList<BlockDeviceMapping>();
+		blockList.add(blockDeviceMapping);
+		
+		request.setBlockDeviceMappings(blockList);
+
+		ArrayList<String> securityGroups = new ArrayList<String>();
+		securityGroups.add(Configuration.SECURITY_GROUP_NAME);
+		
+		request.setSecurityGroups(securityGroups);
+		request.setKeyName(keyName);
+		
+		RunInstancesResult requestResult = client.runInstances(request);
+
+		Reservation reservation = requestResult.getReservation();
+		reservation.getInstances();
+		
+		for (com.amazonaws.services.ec2.model.Instance i : reservation.getInstances())
+			instancesSet.add(new Instance(this, i.getInstanceId(), null));
 	}
 
 	public List<String> getIps() {
@@ -405,7 +341,7 @@ public class VirtualMachine {
 			i.setName(name);
 	}
 
-	public void terminateAllSpots() {
+	public void terminate() {
 		if (instancesSet.size() == 0)
 			return;
 
@@ -413,6 +349,22 @@ public class VirtualMachine {
 			i.terminate();
 
 		instancesSet.clear();
+	}
+	
+	public void reboot() {
+		if (instancesSet.size() == 0)
+			return;
+
+		for (Instance i : instancesSet)
+			i.reboot();
+	}
+	
+	public void addRunningInstance(String id, String spotRequestId) {
+		for (Instance i : instancesSet)
+			if (i.id.equals(id))
+				return;
+		
+		instancesSet.add(new Instance(this, id, spotRequestId));
 	}
 
 	public static class FirewallRule {
@@ -445,6 +397,10 @@ public class VirtualMachine {
 		public String getParameter(String name) {
 			return vm.getParameter(name);
 		}
+		
+		public Path getKey() {
+			return Configuration.getPathToFile(vm.keyName + ".pem");
+		}
 
 		public String getSshUser() {
 			return vm.sshUser;
@@ -467,6 +423,8 @@ public class VirtualMachine {
 		}
 		
 		public void reboot() {
+			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
+			
 			RebootInstancesRequest req = new RebootInstancesRequest();
 			List<String> instanceIds = new ArrayList<String>();
 			instanceIds.add(id);
@@ -476,6 +434,8 @@ public class VirtualMachine {
 		}
 		
 		public void setName(String name) {
+			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
+			
 			CreateTagsRequest req = new CreateTagsRequest();
 			List<String> instanceIds = new ArrayList<String>();
 			instanceIds.add(id);
@@ -506,7 +466,7 @@ public class VirtualMachine {
 					return null;
 			}
 
-			connect();
+			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 			DescribeInstancesRequest instanceReq = new DescribeInstancesRequest();
 			List<String> instanceIds = new ArrayList<String>();
@@ -531,7 +491,7 @@ public class VirtualMachine {
 			if (spotRequestId == null)
 				return SpotState.SPOT_REQUEST_NOT_FOUND;
 
-			connect();
+			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 			DescribeSpotInstanceRequestsRequest spotInstanceReq = new DescribeSpotInstanceRequestsRequest();
 			List<String> spotInstanceRequestIds = new ArrayList<String>();
@@ -559,7 +519,31 @@ public class VirtualMachine {
 					return InstanceStatus.INSTANCE_NOT_FOUND;
 			}
 
-			connect();
+			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
+
+			DescribeInstanceStatusRequest instanceReq = new DescribeInstanceStatusRequest();
+			List<String> instanceIds = new ArrayList<String>();
+			instanceIds.add(id);
+			instanceReq.setInstanceIds(instanceIds);
+			DescribeInstanceStatusResult instanceRes = client
+					.describeInstanceStatus(instanceReq);
+
+			List<com.amazonaws.services.ec2.model.InstanceStatus> reqs = instanceRes
+					.getInstanceStatuses();
+			if (reqs.size() > 0)
+				return InstanceStatus.valueFromStatus(reqs.get(0));
+			else {
+				logger.error("No instance found for the given id (" + id + ").");
+				return InstanceStatus.INSTANCE_NOT_FOUND;
+			}
+		}
+		
+		public static InstanceStatus getInstanceStatus(String id) {
+			if (id == null) {
+				return InstanceStatus.INSTANCE_NOT_FOUND;
+			}
+
+			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 			DescribeInstanceStatusRequest instanceReq = new DescribeInstanceStatusRequest();
 			List<String> instanceIds = new ArrayList<String>();
@@ -586,7 +570,10 @@ public class VirtualMachine {
 		}
 
 		private void terminateSpotRequest() throws AmazonServiceException {
-			connect();
+			if (spotRequestId == null)
+				return;
+			
+			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 			List<String> spotInstanceRequestIds = new ArrayList<String>();
 			spotInstanceRequestIds.add(spotRequestId);
@@ -597,7 +584,10 @@ public class VirtualMachine {
 		}
 
 		private void terminateInstance() throws AmazonServiceException {
-			connect();
+			if (id == null)
+				return;
+			
+			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 			List<String> instanceIds = new ArrayList<String>();
 			instanceIds.add(id);
@@ -624,9 +614,13 @@ public class VirtualMachine {
 			}
 
 			if (spotState != SpotState.ACTIVE) {
-				logger.error("The spot request failed to start and is in the "
-						+ spotState.getState() + " state!");
-				return false;
+				if (spotState == SpotState.SPOT_REQUEST_NOT_FOUND && id != null) {
+					logger.debug("Spot request not found, but maybe you started it as an on demand instance...");
+				} else {
+					logger.error("The spot request failed to start and is in the "
+							+ spotState.getState() + " state!");
+					return false;
+				}
 			}
 
 			try {
