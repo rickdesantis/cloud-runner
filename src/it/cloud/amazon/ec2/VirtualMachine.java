@@ -370,7 +370,8 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 	
 	public void retrieveFiles(String localPath, String remotePath) throws Exception {
 		String filesToBeGet = getParameter("RETRIEVE_FILES");
-		retrieveFiles(filesToBeGet.split(";"), localPath, remotePath);
+		if (filesToBeGet != null)
+			retrieveFiles(filesToBeGet.split(";"), localPath, remotePath);
 	}
 	
 	public void retrieveFiles(String[] filesToBeGet, String localPath, String remotePath) throws Exception {
@@ -399,7 +400,8 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 	
 	public void deleteFiles() throws Exception {
 		String filesToBeDeleted = getParameter("DELETE_FILES");
-		deleteFiles(filesToBeDeleted.split(";"));
+		if (filesToBeDeleted != null)
+			deleteFiles(filesToBeDeleted.split(";"));
 	}
 	
 	public void deleteFiles(String[] filesToBeDeleted) throws Exception {
