@@ -7,4 +7,5 @@ public interface Instance {
 	public String getSshUser();
 	public String getSshPassword();
 	public Path getKey();
+	public String getName();
 }

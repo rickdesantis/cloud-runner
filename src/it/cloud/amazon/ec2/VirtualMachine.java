@@ -5,6 +5,7 @@ import it.cloud.utils.Ssh;
 
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -366,6 +367,51 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 		
 		instancesSet.add(new Instance(this, id, spotRequestId));
 	}
+	
+	public void retrieveFiles(String localPath, String remotePath) throws Exception {
+		String filesToBeGet = getParameter("RETRIEVE_FILES");
+		retrieveFiles(filesToBeGet.split(";"), localPath, remotePath);
+	}
+	
+	public void retrieveFiles(String[] filesToBeGet, String localPath, String remotePath) throws Exception {
+		int count = 1;
+		if (filesToBeGet != null && filesToBeGet.length > 0)
+			for (Instance i : instancesSet) {
+				for (String s : filesToBeGet) {
+					String actualRemotePath;
+					if (s.startsWith("/"))
+						actualRemotePath = s;
+					else
+						actualRemotePath = Paths.get(remotePath, s).toString();
+					
+					String fileName = s;
+					if (s.startsWith("/"))
+						fileName = s.substring(1);
+					
+					Paths.get(localPath, i.getName() + count, fileName).toFile().getParentFile().mkdirs();
+					
+					i.receiveFile(Paths.get(localPath, i.getName() + count, fileName).toString(), actualRemotePath);
+				}
+				
+				count++;
+			}
+	}
+	
+	public void deleteFiles() throws Exception {
+		String filesToBeDeleted = getParameter("DELETE_FILES");
+		deleteFiles(filesToBeDeleted.split(";"));
+	}
+	
+	public void deleteFiles(String[] filesToBeDeleted) throws Exception {
+		if (filesToBeDeleted != null && filesToBeDeleted.length > 0)
+			for (String s : filesToBeDeleted) {
+				for (Instance i : instancesSet) {
+					i.exec(String.format(
+							"rm -rf %s",
+							s));
+				}
+			}
+	}
 
 	public static class FirewallRule {
 
@@ -398,14 +444,23 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 			return vm.getParameter(name);
 		}
 		
+
+		@Override
+		public String getName() {
+			return vm.name;
+		}
+		
+		@Override
 		public Path getKey() {
 			return Configuration.getPathToFile(vm.keyName + ".pem");
 		}
 
+		@Override
 		public String getSshUser() {
 			return vm.sshUser;
 		}
 
+		@Override
 		public String getSshPassword() {
 			return vm.sshPassword;
 		}
@@ -456,6 +511,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 			ip = null;
 		}
 
+		@Override
 		public String getIp() {
 			if (ip != null)
 				return ip;

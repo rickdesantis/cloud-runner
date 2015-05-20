@@ -2,6 +2,7 @@ package it.cloud.utils;
 
 import it.cloud.CloudService;
 import it.cloud.Instance;
+import it.cloud.VirtualMachine;
 import it.cloud.amazon.ec2.Configuration;
 
 import java.io.File;
@@ -13,7 +14,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 
@@ -128,7 +128,7 @@ public class JMeterTest {
 					ultimateGroupCol.appendChild(colp1);
 	
 					Element prop1 = doc.createElement("stringProp");
-					prop1.appendChild(doc.createTextNode(Double.valueOf(Math.ceil(Double.parseDouble(values[0]) / clients)).toString()));
+					prop1.appendChild(doc.createTextNode(Integer.valueOf((int)Math.ceil(Double.parseDouble(values[0]) / clients)).toString()));
 					prop1.setAttribute("name", "1");
 					Element prop2 = doc.createElement("stringProp");
 					String st = String.valueOf(start_time);
@@ -172,8 +172,8 @@ public class JMeterTest {
 	public static RunInstance createModifiedFile(Path baseJmx, String localPathTest, String remotePathTest, String dataFile, int clients, Object... substitutions) {
 		RunInstance res = new RunInstance();
 		
-		Date date = new Date();
-		String startTime = String.valueOf(date.getTime());
+//		Date date = new Date();
+//		String startTime = String.valueOf(date.getTime());
 		String testName = "test";
 		String log_table = String.format("%s/test_table.jtl", remotePathTest);
 		String log_tree = String.format("%s/test_tree.jtl", remotePathTest);
@@ -220,14 +220,14 @@ public class JMeterTest {
 						XPathConstants.NODE);
 				xpathNode.setTextContent(log_tps);
 
-				expression = "//elementProp[@elementType='HTTPArgument' and @name='testname']/stringProp[@name='Argument.value']";
-				xpathNode = (Node) xpath.evaluate(expression, doc,
-						XPathConstants.NODE);
-				xpathNode.setTextContent(testName);
-				expression = "//elementProp[@elementType='HTTPArgument' and @name='starttime']/stringProp[@name='Argument.value']";
-				xpathNode = (Node) xpath.evaluate(expression, doc,
-						XPathConstants.NODE);
-				xpathNode.setTextContent(startTime);
+//				expression = "//elementProp[@elementType='HTTPArgument' and @name='testname']/stringProp[@name='Argument.value']";
+//				xpathNode = (Node) xpath.evaluate(expression, doc,
+//						XPathConstants.NODE);
+//				xpathNode.setTextContent(testName);
+//				expression = "//elementProp[@elementType='HTTPArgument' and @name='starttime']/stringProp[@name='Argument.value']";
+//				xpathNode = (Node) xpath.evaluate(expression, doc,
+//						XPathConstants.NODE);
+//				xpathNode.setTextContent(startTime);
 
 			} catch (XPathExpressionException e) {
 				logger.error("Error while setting the paths to the results.", e);
@@ -276,7 +276,7 @@ public class JMeterTest {
 	private String remotePath;
 	private String jmeterPath;
 	private String data;
-	private ArrayList<Object> substitutions;
+	private Object[] substitutions;
 	
 	public JMeterTest(String clientImageId, int clients, String localPath, String remotePath, String jmeterPath, String data, Object... substitutions) {
 		this.clientImageId = clientImageId;
@@ -285,9 +285,7 @@ public class JMeterTest {
 		this.remotePath = remotePath;
 		this.jmeterPath = jmeterPath;
 		this.data = data;
-		this.substitutions = new ArrayList<Object>();
-		for (Object o : substitutions)
-			this.substitutions.add(o);
+		this.substitutions = substitutions;
 		
 		if (clients <= 0)
 			throw new RuntimeException("You need to use at least 1 client!");
@@ -304,8 +302,8 @@ public class JMeterTest {
 		return startInstancesForTest(service, clientImageId, clients);
 	}
 	
-	public void performTest(List<? extends Instance> runningInstances, RunInstance run) throws Exception {
-		performTest(runningInstances, run, clients, localPath, remotePath, jmeterPath);
+	public void performTest(VirtualMachine vm, RunInstance run) throws Exception {
+		performTest(vm, run, clients, localPath, remotePath, jmeterPath);
 	}
 	
 	public static List<Instance> startInstancesForTest(CloudService service, String clientImageId, int clients) throws Exception {
@@ -327,7 +325,9 @@ public class JMeterTest {
 		
 	}
 	
-	public static void performTest(List<? extends Instance> runningInstances, RunInstance run, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
+	public static void performTest(VirtualMachine vm, RunInstance run, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
+		List<? extends Instance> runningInstances = vm.getInstances();
+		
 		if (runningInstances.size() != clients)
 			throw new RuntimeException("You aren't using the exact number of running instances! (" + runningInstances.size() + " vs " + clients + ")");
 		
@@ -341,13 +341,19 @@ public class JMeterTest {
 				Ssh.sendFile(i, Paths.get(localPath, s).toString(), Paths.get(remotePath, s).toString());
 		}
 		
-		for (Instance i : runningInstances)
-			Ssh.exec(i, String.format("%s/bin/jmeter -n -t %s/%s", jmeterPath, remotePath, run.jmx.getName()));
+		ArrayList<Thread> threads = new ArrayList<Thread>();
 		
-		for (Instance i : runningInstances) {
-			for (String s : run.fileToBeGet)
-				Ssh.receiveFile(i, Paths.get(localPath, s).toString(), Paths.get(remotePath, s).toString());
-		}
+		for (Instance i : runningInstances)
+			threads.add(Ssh.execInBackground(i, String.format("%s/bin/jmeter -n -t %s/%s", jmeterPath, remotePath, run.jmx.getName())));
+		
+		for (Thread t : threads)
+			t.join();
+		
+		String[] filesToBeGet = new String[run.fileToBeGet.size()];
+		for (int i = 0; i < filesToBeGet.length; ++i)
+			filesToBeGet[i] = run.fileToBeGet.get(i);
+		
+		vm.retrieveFiles(filesToBeGet, localPath, remotePath);
 		
 	}
 
