@@ -2,12 +2,11 @@ package it.cloud.utils;
 
 import it.cloud.CloudService;
 import it.cloud.Instance;
+import it.cloud.amazon.ec2.Configuration;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
@@ -16,7 +15,6 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Properties;
 import java.util.Scanner;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -190,14 +188,14 @@ public class JMeterTest {
 		res.fileToBeGet.add("test_tps.jtl");
 
 		try {
-			File fXmlFile = baseJmx.toFile();
+			File fXmlFile = Configuration.getPathToFile(baseJmx.toString()).toFile();
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory
 					.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			Document doc = dBuilder.parse(fXmlFile);
 			doc.getDocumentElement().normalize();
 			
-			considerDataFile(doc, Paths.get(localPathTest, dataFile), clients);
+			considerDataFile(doc, Configuration.getPathToFile(dataFile), clients);
 
 			try {
 				XPath xpath = XPathFactory.newInstance().newXPath();
@@ -296,32 +294,6 @@ public class JMeterTest {
 		
 		if (clientImageId == null || localPath == null || remotePath == null || jmeterPath == null || data == null)
 			throw new RuntimeException("All the parameters are important and they cannot be null.");
-	}
-	
-	public JMeterTest(String propertiesFile) throws Exception {
-		Properties prop = new Properties();
-		InputStream is = new FileInputStream(propertiesFile);
-		prop.load(is);
-		
-		clientImageId = prop.getProperty("CLIENT_IMAGE_ID");
-		clients = Integer.parseInt(prop.getProperty("CLIENTS", "1"));
-		localPath = prop.getProperty("LOCAL_PATH");
-		remotePath = prop.getProperty("REMOTE_PATH");
-		jmeterPath = prop.getProperty("JMETER_PATH");
-		data = prop.getProperty("DATA_FILE");
-		substitutions = new ArrayList<Object>();
-		{
-			int i = 0;
-			for (String tmp = prop.getProperty("SUBSTITUTION" + i); tmp != null; ++i, tmp = prop.getProperty("SUBSTITUTION" + i))
-				substitutions.add(tmp);
-		}
-		is.close();
-		
-		if (clients <= 0)
-			throw new RuntimeException("You need to use at least 1 client!");
-		
-		if (clientImageId == null || localPath == null || remotePath == null || jmeterPath == null || data == null)
-			throw new RuntimeException("Malformed properties file. Check it out.");
 	}
 	
 	public RunInstance createModifiedFile(Path baseJmx) throws Exception {

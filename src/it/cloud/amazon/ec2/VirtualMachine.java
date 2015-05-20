@@ -549,8 +549,14 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 			List<String> instanceIds = new ArrayList<String>();
 			instanceIds.add(id);
 			instanceReq.setInstanceIds(instanceIds);
-			DescribeInstanceStatusResult instanceRes = client
-					.describeInstanceStatus(instanceReq);
+			DescribeInstanceStatusResult instanceRes;
+			try {
+				instanceRes = client
+						.describeInstanceStatus(instanceReq);
+			} catch (Exception e) {
+				logger.error("No instance found for the given id (" + id + ").");
+				return InstanceStatus.INSTANCE_NOT_FOUND;
+			}
 
 			List<com.amazonaws.services.ec2.model.InstanceStatus> reqs = instanceRes
 					.getInstanceStatuses();
@@ -623,11 +629,11 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 				}
 			}
 
-			try {
-				Thread.sleep(10 * 1000);
-			} catch (InterruptedException e) {
-				logger.error("Error while waiting.", e);
-			}
+//			try {
+//				Thread.sleep(10 * 1000);
+//			} catch (InterruptedException e) {
+//				logger.error("Error while waiting.", e);
+//			}
 
 			InstanceStatus instanceStatus = getInstanceStatus();
 

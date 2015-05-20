@@ -275,6 +275,10 @@ public class AmazonEC2 implements CloudService {
 		if (vm.getInstancesNeeded() <= vm.getInstancesRunning())
 			return;
 		
+		filters = new ArrayList<Filter>();
+		filters.add(new Filter("image-id", getAsList(vm.getImageId()) ));
+		filters.add(new Filter("instance-type", getAsList(vm.getSize()) ));
+		
 		DescribeInstancesRequest instanceRequest = new DescribeInstancesRequest();
 		instanceRequest.setFilters(filters);
 		
