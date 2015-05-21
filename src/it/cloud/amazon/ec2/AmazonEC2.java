@@ -12,7 +12,9 @@ import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 
@@ -126,8 +128,14 @@ public class AmazonEC2 implements CloudService {
 			logger.error("Error while creating the file.", e);
 		}
 	}
+	
+	private static Map<String, double[]> pricesInRegion = new HashMap<String, double[]>();
 
 	public static double[] getPricesInRegion(String size, String os) {
+		double[] resultInMap = pricesInRegion.get(size + "@" + os);
+		if (resultInMap != null && resultInMap.length > 0)
+			return resultInMap;
+		
 		connect();
 
 		DescribeAvailabilityZonesRequest availabilityZoneReq = new DescribeAvailabilityZonesRequest();
@@ -165,6 +173,7 @@ public class AmazonEC2 implements CloudService {
 			i++;
 		}
 
+		pricesInRegion.put(size + "@" + os, res);
 		return res;
 	}
 	
