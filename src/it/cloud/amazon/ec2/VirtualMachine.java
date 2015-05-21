@@ -717,6 +717,26 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 			return true;
 		}
+		
+		public static final long TIMEOUT = 60000;
+		
+		public boolean waitUntilSshAvailable() {
+			long init = System.currentTimeMillis();
+			long end = init;
+			boolean done = false;
+			while (!done && ((end - init) <= TIMEOUT)) {
+				try {
+					exec("echo foo > /dev/null");
+					done = true;
+				} catch (Exception e) {
+					try {
+						Thread.sleep(1000);
+					} catch (Exception e1) { }
+				}
+				end = System.currentTimeMillis();
+			}
+			return done;
+		}
 	}
 
 	public static enum InstanceStatus {

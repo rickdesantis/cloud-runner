@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 public class JMeterTest {
 	
@@ -80,12 +81,23 @@ public class JMeterTest {
 		
 		Node ultimateGroup = doc.getElementsByTagName(ultimateThreadGroup).item(0);
 		
-		while (ultimateGroup.hasChildNodes())
-			ultimateGroup.removeChild(ultimateGroup.getFirstChild());
+//		while (ultimateGroup.hasChildNodes())
+//			ultimateGroup.removeChild(ultimateGroup.getFirstChild());
 		ultimateGroup.appendChild(doc.createTextNode("\n"));
 		Element ultimateGroupCol = doc.createElement("collectionProp");
 		ultimateGroupCol.appendChild(doc.createTextNode("\n"));
 		ultimateGroupCol.setAttribute("name", "ultimatethreadgroupdata");
+//		ultimateGroup.appendChild(ultimateGroupCol);
+		
+		NodeList collectionProps = ((Element)ultimateGroup).getElementsByTagName("collectionProp");
+		if (collectionProps.getLength() > 0) {
+			boolean done = false;
+			for (int i = 0; i < collectionProps.getLength() && !done; ++i)
+				if (((Element)collectionProps.item(i)).getAttribute("name").equalsIgnoreCase("ultimatethreadgroupdata")) {
+					ultimateGroup.removeChild(collectionProps.item(i));
+					done = true;
+				}
+		}
 		ultimateGroup.appendChild(ultimateGroupCol);
 
 		int start_time = 0;
@@ -95,7 +107,9 @@ public class JMeterTest {
 			while (input.hasNextLine()) {
 				String nameProp = nameFormatter.format(index);
 				String line = input.nextLine();
-				String[] values = line.split(" ");
+				String[] values = line.trim().split(" ");
+				if (values.length < 2)
+					continue;
 				
 				if (useVariableTimer) {
 					Element colp = doc.createElement("collectionProp");
@@ -133,10 +147,10 @@ public class JMeterTest {
 					Element prop2 = doc.createElement("stringProp");
 					String st = String.valueOf(start_time);
 					prop2.appendChild(doc.createTextNode(st));
-					start_time = start_time + (int) Double.parseDouble(values[1]) + 10;
+					start_time = start_time + (int) Double.parseDouble(values[1]) + 20;
 					prop2.setAttribute("name", "2");
 					Element prop3 = doc.createElement("stringProp");
-					prop3.appendChild(doc.createTextNode("0"));
+					prop3.appendChild(doc.createTextNode("10"));
 					prop3.setAttribute("name", "3");
 					Element prop4 = doc.createElement("stringProp");
 					prop4.appendChild(doc.createTextNode(values[1]));
