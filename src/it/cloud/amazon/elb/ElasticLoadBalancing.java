@@ -3,6 +3,7 @@ package it.cloud.amazon.elb;
 import it.cloud.amazon.ec2.Configuration;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,9 @@ import com.amazonaws.services.elasticloadbalancing.model.CreateLoadBalancerReque
 import com.amazonaws.services.elasticloadbalancing.model.CreateLoadBalancerResult;
 import com.amazonaws.services.elasticloadbalancing.model.DeleteLoadBalancerRequest;
 import com.amazonaws.services.elasticloadbalancing.model.DeregisterInstancesFromLoadBalancerRequest;
+import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersRequest;
+import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersResult;
+import com.amazonaws.services.elasticloadbalancing.model.LoadBalancerDescription;
 import com.amazonaws.services.elasticloadbalancing.model.RegisterInstancesWithLoadBalancerRequest;
 
 public class ElasticLoadBalancing {
@@ -46,6 +50,25 @@ public class ElasticLoadBalancing {
 		CreateLoadBalancerResult res = client.createLoadBalancer(req);
 
 		return res.getDNSName();
+	}
+	
+	public static String getLoadBalancerDNS(String name) {
+		if (name == null || name.trim().length() == 0)
+			throw new RuntimeException(
+					"The name of the load balancer cannot be empty!");
+
+		connect();
+		
+		ArrayList<String> names = new ArrayList<String>();
+		names.add(name);
+		
+		DescribeLoadBalancersRequest req = new DescribeLoadBalancersRequest(names);
+		DescribeLoadBalancersResult res = client.describeLoadBalancers(req);
+		List<LoadBalancerDescription> descs = res.getLoadBalancerDescriptions();
+		if (descs.size() == 0 || descs.get(0) == null)
+			return null;
+		
+		return descs.get(0).getDNSName();
 	}
 	
 	public static void deleteLoadBalancer(String name) {
