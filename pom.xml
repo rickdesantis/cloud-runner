@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>it.cloud.cloud-runner</groupId>
 	<artifactId>cloud-runner</artifactId>
-	<version>0.0.3</version>
+	<version>0.0.4</version>
 
 	<licenses>
 		<license>
@@ -12,14 +12,14 @@
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
-	
+
 	<repositories>
 		<repository>
-            <id>maven-restlet</id>
-            <name>Public online Restlet repository</name>
-            <url>http://maven.restlet.com</url>
-        </repository>
-    </repositories>
+			<id>maven-restlet</id>
+			<name>Public online Restlet repository</name>
+			<url>http://maven.restlet.com</url>
+		</repository>
+	</repositories>
 
 	<properties>
 		<github.global.server>github</github.global.server>
@@ -110,14 +110,19 @@
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-ec2</artifactId>
-			<version>1.9.26</version>
+			<version>1.9.38</version>
 		</dependency>
 		<dependency>
-            <groupId>org.restlet.jse</groupId>
-            <artifactId>org.restlet</artifactId>
-            <version>2.3.1</version>
-        </dependency>
-        <dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-elasticloadbalancing</artifactId>
+			<version>1.9.38</version>
+		</dependency>
+		<dependency>
+			<groupId>org.restlet.jse</groupId>
+			<artifactId>org.restlet</artifactId>
+			<version>2.3.1</version>
+		</dependency>
+		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
 			<version>2.4</version>
