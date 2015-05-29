@@ -81,10 +81,13 @@ public class Ssh {
 	}
 	
 	public static Thread execInBackground(Instance inst, String command) throws Exception {
+		final Instance finst = inst;
+		final String fcommand = command;
+		
 		Thread t = new Thread() {
 			public void run() {
 				try {
-					exec(inst, command);
+					exec(finst, fcommand);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
