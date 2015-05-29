@@ -39,7 +39,7 @@ public class ElasticLoadBalancing {
 		return client;
 	}
 
-	public class Listener {
+	public static class Listener {
 		public String protocol;
 		public int port;
 
