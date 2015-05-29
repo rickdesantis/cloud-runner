@@ -1,5 +1,6 @@
 package it.cloud.amazon.elb;
 
+import it.cloud.amazon.ec2.AmazonEC2;
 import it.cloud.amazon.ec2.Configuration;
 
 import java.util.ArrayList;
@@ -76,6 +77,8 @@ public class ElasticLoadBalancing {
 		ArrayList<String> securityGroups = new ArrayList<String>();
 		securityGroups.add(Configuration.SECURITY_GROUP_NAME);
 		req.setSecurityGroups(securityGroups);
+		
+		req.setAvailabilityZones(AmazonEC2.getAllAvailabilityZones());
 
 		CreateLoadBalancerResult res = client.createLoadBalancer(req);
 

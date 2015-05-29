@@ -138,16 +138,12 @@ public class AmazonEC2 implements CloudService {
 		
 		connect();
 
-		DescribeAvailabilityZonesRequest availabilityZoneReq = new DescribeAvailabilityZonesRequest();
-		DescribeAvailabilityZonesResult result = client
-				.describeAvailabilityZones(availabilityZoneReq);
-		List<AvailabilityZone> availabilityZones = result
-				.getAvailabilityZones();
+		List<String> availabilityZones = getAllAvailabilityZones();
 
 		double res[] = new double[availabilityZones.size()];
 		int i = 0;
 
-		for (AvailabilityZone zone : availabilityZones) {
+		for (String zone : availabilityZones) {
 			DescribeSpotPriceHistoryRequest req = new DescribeSpotPriceHistoryRequest();
 
 			List<String> instanceTypes = new ArrayList<String>();
@@ -158,7 +154,7 @@ public class AmazonEC2 implements CloudService {
 			productDescriptions.add(os);
 			req.setProductDescriptions(productDescriptions);
 
-			req.setAvailabilityZone(zone.getZoneName());
+			req.setAvailabilityZone(zone);
 
 			req.setMaxResults(1);
 
@@ -167,7 +163,7 @@ public class AmazonEC2 implements CloudService {
 			res[i] = Double.parseDouble(priceResult.getSpotPriceHistory()
 					.get(0).getSpotPrice());
 
-			logger.debug("Zone: {}, Price: {}", zone.getZoneName(),
+			logger.debug("Zone: {}, Price: {}", zone,
 					(float) res[i]);
 
 			i++;
@@ -303,6 +299,27 @@ public class AmazonEC2 implements CloudService {
 					vm.addRunningInstance(instance.getInstanceId(), null);
 			}
 		}
+	}
+	
+	public static List<String> getAllAvailabilityZones() {
+		connect();
+		
+		DescribeAvailabilityZonesRequest req = new DescribeAvailabilityZonesRequest();
+		
+		ArrayList<Filter> filters = new ArrayList<Filter>();
+		ArrayList<String> regions = new ArrayList<String>();
+		regions.add(Configuration.REGION);
+		filters.add(new Filter("region-name", regions));
+		req.setFilters(filters);
+		
+		DescribeAvailabilityZonesResult res = client.describeAvailabilityZones(req);
+		
+		List<AvailabilityZone> zones = res.getAvailabilityZones();
+		ArrayList<String> zonesStr = new ArrayList<String>();
+		for (AvailabilityZone zone : zones)
+			zonesStr.add(zone.getZoneName());
+		
+		return zonesStr;
 	}
 
 }
