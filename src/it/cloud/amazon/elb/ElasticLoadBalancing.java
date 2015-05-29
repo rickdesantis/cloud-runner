@@ -75,7 +75,7 @@ public class ElasticLoadBalancing {
 		}
 
 		ArrayList<String> securityGroups = new ArrayList<String>();
-		securityGroups.add(Configuration.SECURITY_GROUP_NAME);
+		securityGroups.add(AmazonEC2.getSecurityGroupId());
 		req.setSecurityGroups(securityGroups);
 		
 		req.setAvailabilityZones(AmazonEC2.getAllAvailabilityZones());

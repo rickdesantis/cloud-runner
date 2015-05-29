@@ -32,6 +32,8 @@ import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesRequest;
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
+import com.amazonaws.services.ec2.model.DescribeSecurityGroupsRequest;
+import com.amazonaws.services.ec2.model.DescribeSecurityGroupsResult;
 import com.amazonaws.services.ec2.model.DescribeSpotInstanceRequestsRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotInstanceRequestsResult;
 import com.amazonaws.services.ec2.model.DescribeSpotPriceHistoryRequest;
@@ -39,6 +41,7 @@ import com.amazonaws.services.ec2.model.DescribeSpotPriceHistoryResult;
 import com.amazonaws.services.ec2.model.Filter;
 import com.amazonaws.services.ec2.model.IpPermission;
 import com.amazonaws.services.ec2.model.Reservation;
+import com.amazonaws.services.ec2.model.SecurityGroup;
 import com.amazonaws.services.ec2.model.SpotInstanceRequest;
 
 public class AmazonEC2 implements CloudService {
@@ -320,6 +323,24 @@ public class AmazonEC2 implements CloudService {
 			zonesStr.add(zone.getZoneName());
 		
 		return zonesStr;
+	}
+	
+	public static String getSecurityGroupId() {
+		connect();
+		
+		DescribeSecurityGroupsRequest req = new DescribeSecurityGroupsRequest();
+		
+		ArrayList<String> groupNames = new ArrayList<String>();
+		groupNames.add(Configuration.SECURITY_GROUP_NAME);
+		req.setGroupNames(groupNames);
+		
+		DescribeSecurityGroupsResult res = client.describeSecurityGroups(req);
+		List<SecurityGroup> securityGroups = res.getSecurityGroups();
+		
+		if (securityGroups == null || securityGroups.size() == 0)
+			return null;
+		
+		return securityGroups.get(0).getGroupId();
 	}
 
 }

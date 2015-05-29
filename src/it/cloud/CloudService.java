@@ -1,7 +1,5 @@
 package it.cloud;
 
-import it.cloud.amazon.ec2.AmazonEC2;
-
 import java.util.List;
 
 public interface CloudService {
