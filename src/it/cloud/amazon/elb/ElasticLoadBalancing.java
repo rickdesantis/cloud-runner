@@ -23,7 +23,8 @@ import com.amazonaws.services.elasticloadbalancing.model.RegisterInstancesWithLo
 public class ElasticLoadBalancing {
 
 	@SuppressWarnings("unused")
-	private static final Logger logger = LoggerFactory.getLogger(ElasticLoadBalancing.class);
+	private static final Logger logger = LoggerFactory
+			.getLogger(ElasticLoadBalancing.class);
 
 	private static AmazonElasticLoadBalancingClient client = null;
 
@@ -38,7 +39,21 @@ public class ElasticLoadBalancing {
 		return client;
 	}
 
-	public static String createNewLoadBalancer(String name) {
+	public class Listener {
+		public String protocol;
+		public int port;
+
+		public Listener(String protocol, int port) {
+			if (!protocol.equals("HTTP") && !protocol.equals("HTTPS") && !protocol.equals("TCP") && !protocol.equals("SSL"))
+				throw new RuntimeException("Protocol " + protocol + " not recognized!");
+			
+			this.protocol = protocol;
+			this.port = port;
+		}
+	}
+
+	public static String createNewLoadBalancer(String name,
+			Listener... listeners) {
 		if (name == null || name.trim().length() == 0)
 			throw new RuntimeException(
 					"The name of the load balancer cannot be empty!");
@@ -46,31 +61,47 @@ public class ElasticLoadBalancing {
 		connect();
 
 		CreateLoadBalancerRequest req = new CreateLoadBalancerRequest();
+
 		req.setLoadBalancerName(name);
+
+		if (listeners != null && listeners.length > 0) {
+			ArrayList<com.amazonaws.services.elasticloadbalancing.model.Listener> actualListeners = new ArrayList<com.amazonaws.services.elasticloadbalancing.model.Listener>();
+			for (Listener listener : listeners)
+				actualListeners
+						.add(new com.amazonaws.services.elasticloadbalancing.model.Listener(
+								listener.protocol, listener.port, listener.port));
+			req.setListeners(actualListeners);
+		}
+
+		ArrayList<String> securityGroups = new ArrayList<String>();
+		securityGroups.add(Configuration.SECURITY_GROUP_NAME);
+		req.setSecurityGroups(securityGroups);
+
 		CreateLoadBalancerResult res = client.createLoadBalancer(req);
 
 		return res.getDNSName();
 	}
-	
+
 	public static String getLoadBalancerDNS(String name) {
 		if (name == null || name.trim().length() == 0)
 			throw new RuntimeException(
 					"The name of the load balancer cannot be empty!");
 
 		connect();
-		
+
 		ArrayList<String> names = new ArrayList<String>();
 		names.add(name);
-		
-		DescribeLoadBalancersRequest req = new DescribeLoadBalancersRequest(names);
+
+		DescribeLoadBalancersRequest req = new DescribeLoadBalancersRequest(
+				names);
 		DescribeLoadBalancersResult res = client.describeLoadBalancers(req);
 		List<LoadBalancerDescription> descs = res.getLoadBalancerDescriptions();
 		if (descs.size() == 0 || descs.get(0) == null)
 			return null;
-		
+
 		return descs.get(0).getDNSName();
 	}
-	
+
 	public static void deleteLoadBalancer(String name) {
 		if (name == null || name.trim().length() == 0)
 			throw new RuntimeException(
@@ -92,7 +123,7 @@ public class ElasticLoadBalancing {
 		if (instanceIds == null || instanceIds.length == 0)
 			throw new RuntimeException(
 					"You need to specify at least one instance id!");
-		
+
 		connect();
 
 		ArrayList<com.amazonaws.services.elasticloadbalancing.model.Instance> instances = new ArrayList<com.amazonaws.services.elasticloadbalancing.model.Instance>();
@@ -105,7 +136,7 @@ public class ElasticLoadBalancing {
 				name, instances);
 		client.registerInstancesWithLoadBalancer(req);
 	}
-	
+
 	public static void removeInstancesFromLoadBalancer(String name,
 			String... instanceIds) {
 		if (name == null || name.trim().length() == 0)
@@ -115,7 +146,7 @@ public class ElasticLoadBalancing {
 		if (instanceIds == null || instanceIds.length == 0)
 			throw new RuntimeException(
 					"You need to specify at least one instance id!");
-		
+
 		connect();
 
 		ArrayList<com.amazonaws.services.elasticloadbalancing.model.Instance> instances = new ArrayList<com.amazonaws.services.elasticloadbalancing.model.Instance>();
