@@ -1,6 +1,8 @@
 package it.cloud.utils;
 
 import it.cloud.Instance;
+import it.cloud.VirtualMachine;
+import it.cloud.amazon.ec2.Configuration;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,18 +24,26 @@ import com.jcraft.jsch.Session;
 public class Ssh {
 	
 	private static final Logger logger = LoggerFactory.getLogger(Ssh.class);
-
+	
+	public static List<String> exec(String ip, VirtualMachine vm, String command) throws Exception {
+		return exec(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"), Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), command);
+	}
+	
 	public static List<String> exec(Instance inst, String command) throws Exception {
+		return exec(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
+	}
+
+	public static List<String> exec(String ip, String user, String password, String key, String command) throws Exception {
 		List<String> res = new ArrayList<String>();
 		
 		// creating session with username, server's address and port (22 by
 		// default)
 		JSch jsch = new JSch();
 		
-		jsch.addIdentity(inst.getKey().toString());
+		jsch.addIdentity(key);
 		
-		Session session = jsch.getSession(inst.getSshUser(), inst.getIp(), 22);
-		session.setPassword(inst.getSshPassword());
+		Session session = jsch.getSession(user, ip, 22);
+		session.setPassword(password);
 
 		// disabling of certificate checks
 		session.setConfig("StrictHostKeyChecking", "no");
@@ -80,14 +90,25 @@ public class Ssh {
 		return res;
 	}
 	
+	public static Thread execInBackground(String ip, VirtualMachine vm, String command) throws Exception {
+		return execInBackground(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"), Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), command);
+	}
+	
 	public static Thread execInBackground(Instance inst, String command) throws Exception {
-		final Instance finst = inst;
+		return execInBackground(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
+	}
+
+	public static Thread execInBackground(String ip, String user, String password, String key, String command) throws Exception {
+		final String fip = ip;
+		final String fuser = user;
+		final String fpassword = password;
+		final String fkey = key;
 		final String fcommand = command;
 		
 		Thread t = new Thread() {
 			public void run() {
 				try {
-					exec(finst, fcommand);
+					exec(fip, fuser, fpassword, fkey, fcommand);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -97,18 +118,25 @@ public class Ssh {
 		return t;
 	}
 	
+	public static void receiveFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
+		receiveFile(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"), Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), lfile, rfile);
+	}
 	
 	public static void receiveFile(Instance inst, String lfile, String rfile) throws Exception {
+		receiveFile(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), lfile, rfile);
+	}
+	
+	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile) throws Exception {
 		FileOutputStream fos = null;
 		try {
 			// creating session with username, server's address and port (22 by
 			// default)
 			JSch jsch = new JSch();
 			
-			jsch.addIdentity(inst.getKey().toString());
+			jsch.addIdentity(key);
 			
-			Session session = jsch.getSession(inst.getSshUser(), inst.getIp(), 22);
-			session.setPassword(inst.getSshPassword());
+			Session session = jsch.getSession(user, ip, 22);
+			session.setPassword(password);
 
 			String prefix = null;
 			if (new File(lfile).isDirectory()) {
@@ -204,17 +232,25 @@ public class Ssh {
 		}
 	}
 	
+	public static void sendFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
+		sendFile(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"), Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), lfile, rfile);
+	}
+	
 	public static void sendFile(Instance inst, String lfile, String rfile) throws Exception {
+		sendFile(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), lfile, rfile);
+	}
+	
+	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile) throws Exception {
 		FileInputStream fis = null;
 		try {
 			// creating session with username, server's address and port (22 by
 			// default)
 			JSch jsch = new JSch();
 			
-			jsch.addIdentity(inst.getKey().toString());
+			jsch.addIdentity(key);
 			
-			Session session = jsch.getSession(inst.getSshUser(), inst.getIp(), 22);
-			session.setPassword(inst.getSshPassword());
+			Session session = jsch.getSession(user, ip, 22);
+			session.setPassword(password);
 
 			// disabling of certificate checks
 			session.setConfig("StrictHostKeyChecking", "no");

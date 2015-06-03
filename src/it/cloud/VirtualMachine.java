@@ -13,4 +13,5 @@ public interface VirtualMachine {
 	public void retrieveFiles(String localPath, String remotePath) throws Exception;
 	public void deleteFiles() throws Exception;
 	public void deleteFiles(String[] filesToBeDeleted) throws Exception;
+	public String getParameter(String name);
 }
