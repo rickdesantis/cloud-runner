@@ -96,8 +96,11 @@ public class AmazonEC2 implements CloudService {
 					Configuration.SECURITY_GROUP_DESC);
 			client.createSecurityGroup(securityGroupRequest);
 		} catch (AmazonServiceException e) {
-			logger.error(
-					"Error while creating the security group: it probably already exists.",
+			if (e.getErrorCode().equals("InvalidGroup.Duplicate"))
+				logger.debug("The security group already exists.");
+			else
+				logger.error(
+					"Error while creating the security group.",
 					e);
 		}
 
@@ -119,8 +122,11 @@ public class AmazonEC2 implements CloudService {
 					Configuration.SECURITY_GROUP_NAME, ipPermissions);
 			client.authorizeSecurityGroupIngress(ingressRequest);
 		} catch (AmazonServiceException e) {
-			logger.error(
-					"Error while setting the security group: it probably was already set.",
+			if (e.getErrorCode().equals("InvalidPermission.Duplicate"))
+				logger.debug("The security group was already set.");
+			else
+				logger.error(
+					"Error while setting the security group.",
 					e);
 		}
 
