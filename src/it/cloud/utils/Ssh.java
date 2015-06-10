@@ -10,14 +10,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 
@@ -33,7 +36,8 @@ public class Ssh {
 		return exec(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
 	}
 
-	public static List<String> exec(String ip, String user, String password, String key, String command) throws Exception {
+	@Deprecated
+	public static List<String> execWithoutEnvironment(String ip, String user, String password, String key, String command) throws Exception {
 		List<String> res = new ArrayList<String>();
 		
 		// creating session with username, server's address and port (22 by
@@ -83,6 +87,66 @@ public class Ssh {
 			} catch (Exception ee) {
 			}
 		}
+		// closing connection
+		channel.disconnect();
+		session.disconnect();
+
+		return res;
+	}
+	
+	public static final String FINISHED_FLAG = "TERMINATO_TUTTO_TUTTO";
+	
+	public static List<String> exec(String ip, String user, String password, String key, String command) throws Exception {
+		List<String> res = new ArrayList<String>();
+		
+		// creating session with username, server's address and port (22 by
+		// default)
+		JSch jsch = new JSch();
+		
+		jsch.addIdentity(key);
+		
+		Session session = jsch.getSession(user, ip, 22);
+		session.setPassword(password);
+
+		// disabling of certificate checks
+		session.setConfig("StrictHostKeyChecking", "no");
+		// creating connection
+		session.connect();
+
+		// creating channel in shell mode
+		ChannelShell channel = (ChannelShell)session.openChannel("shell");
+		// connecting channel
+		channel.connect();
+		
+		channel.setPtySize(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+		
+		try (
+				PrintStream out = new PrintStream(channel.getOutputStream());
+				Scanner in = new Scanner(channel.getInputStream())
+				) {
+			out.println("echo " + FINISHED_FLAG);
+			out.flush();
+			
+			while (in.hasNextLine()) {
+				String line = in.nextLine();
+				if (line.equals(FINISHED_FLAG))
+					break;
+			}
+			
+			out.println(command + " && echo " + FINISHED_FLAG);
+			out.flush();
+			
+			in.nextLine();
+			
+			while (in.hasNextLine()) {
+				String line = in.nextLine();
+				if (line.equals(FINISHED_FLAG))
+					break;
+				logger.trace(line);
+				res.add(line);
+			}
+		}
+		
 		// closing connection
 		channel.disconnect();
 		session.disconnect();
