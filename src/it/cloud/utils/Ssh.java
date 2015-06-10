@@ -96,6 +96,11 @@ public class Ssh {
 	
 	public static final String FINISHED_FLAG = "TERMINATO_TUTTO_TUTTO";
 	
+	public static void main(String[] args) throws Exception {
+		exec("54.154.106.241", "ubuntu", "ubuntu", "/Users/ft/Lavoro/tmp/sdatests-0.0.8/desantis-ireland.pem",
+				"cd /home/ubuntu/modaclouds-sda && source ~/.bashrc && sudo -E bash run_main.sh /usr/local/MATLAB/MATLAB_Compiler_Runtime/v81 tower4clouds > /home/ubuntu/sda.out 2>&1 &");
+	}
+	
 	public static List<String> exec(String ip, String user, String password, String key, String command) throws Exception {
 		List<String> res = new ArrayList<String>();
 		
@@ -133,15 +138,22 @@ public class Ssh {
 					break;
 			}
 			
-			out.println(command + " && echo " + FINISHED_FLAG);
+			out.println(command);
 			out.flush();
 			
 			in.nextLine();
+			
+			try { Thread.sleep(100); } catch (Exception e) { }
+			
+			out.println("echo " + FINISHED_FLAG);
+			out.flush();
 			
 			while (in.hasNextLine()) {
 				String line = in.nextLine();
 				if (line.equals(FINISHED_FLAG))
 					break;
+				if (line.contains(FINISHED_FLAG))
+					continue;
 				logger.trace(line);
 				res.add(line);
 			}
