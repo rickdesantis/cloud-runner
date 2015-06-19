@@ -339,6 +339,8 @@ public class JMeterTest {
 		
 	}
 	
+	public static String javaParameters = null;
+	
 	public static void performTest(VirtualMachine vm, RunInstance run, int clients, String localPath, String remotePath, String jmeterPath) throws Exception {
 		List<? extends Instance> runningInstances = vm.getInstances();
 		
@@ -358,7 +360,7 @@ public class JMeterTest {
 		ArrayList<Thread> threads = new ArrayList<Thread>();
 		
 		for (Instance i : runningInstances)
-			threads.add(Ssh.execInBackground(i, String.format("%s/bin/jmeter -n -t %s/%s", jmeterPath, remotePath, run.jmx.getName())));
+			threads.add(Ssh.execInBackground(i, String.format("%s/bin/jmeter -n -t %s/%s", javaParameters != null ? "JVM_ARGS=\"" + javaParameters + "\" " + jmeterPath : jmeterPath, remotePath, run.jmx.getName())));
 		
 		for (Thread t : threads)
 			t.join();
