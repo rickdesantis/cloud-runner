@@ -4,6 +4,7 @@ import it.cloud.amazon.Configuration;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
@@ -127,6 +128,20 @@ public class CloudWatch {
 		
 		GetMetricStatisticsResult res = client.getMetricStatistics(req);
 		return res.getDatapoints();
+	}
+	
+	public static void writeAllInstanceMetricsToFiles(Path parent, String[] metricNames, String instanceId, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		writeAllMetricsToFiles(parent, metricNames, getInstanceDimension(instanceId), "AWS/EC2", startTime, period, statistic, unit);
+	}
+	
+	public static void writeAllMetricsToFiles(Path parent, String[] metricNames, Dimension dim, String namespace, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		if (parent == null || parent.toFile().exists())
+			throw new RuntimeException("You need to specify a valid parent.");
+		if (metricNames.length == 0)
+			return;
+		
+		for (String metricName : metricNames)
+			writeMetricToFile(Paths.get(parent.toString(), metricName + ".csv"), metricName, dim, namespace, startTime, period, statistic, unit);
 	}
 	
 	public static void writeInstanceMetricToFile(Path file, String metricName, String instanceId, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
