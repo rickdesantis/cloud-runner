@@ -4,10 +4,13 @@ import it.cloud.amazon.Configuration;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +19,7 @@ import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
 import com.amazonaws.services.cloudwatch.model.Datapoint;
+import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsResult;
 import com.amazonaws.services.cloudwatch.model.ListMetricsRequest;
@@ -78,12 +82,32 @@ public class CloudWatch {
 		return res.getMetrics();
 	}
 	
-	public static List<Datapoint> getMetricSinceDate(String metricName, Date startTime, int period, Statistic statistic, StandardUnit unit) {
+	public static Dimension getInstanceDimension(String instanceId) {
+		if (instanceId == null)
+			return null;
+		
+		Dimension dim = new Dimension();
+		dim.setName("InstanceId");
+		dim.setValue(instanceId);
+		return dim;
+	}
+	
+	public static List<Datapoint> getInstanceMetric(String metricName, String instanceId, Date startTime, int period, Statistic statistic, StandardUnit unit) {
+		return getMetric(metricName, getInstanceDimension(instanceId), "AWS/EC2", startTime, period, statistic, unit);
+	}
+	
+	public static List<Datapoint> getMetric(String metricName, Dimension dim, String namespace, Date startTime, int period, Statistic statistic, StandardUnit unit) {
 		connect();
 		
 		GetMetricStatisticsRequest req = new GetMetricStatisticsRequest();
 		
 		req.setMetricName(metricName);
+		
+		List<Dimension> dimensions = new ArrayList<Dimension>();
+		dimensions.add(dim);
+		req.setDimensions(dimensions);
+		
+		req.setNamespace(namespace);
 		
 		req.setStartTime(startTime);
 		req.setEndTime(new Date());
@@ -105,8 +129,12 @@ public class CloudWatch {
 		return res.getDatapoints();
 	}
 	
-	public static void writeMetricSinceDateToFile(Path file, String metricName, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
-		List<Datapoint> datapoints = getMetricSinceDate(metricName, startTime, period, statistic, unit);
+	public static void writeInstanceMetricToFile(Path file, String metricName, String instanceId, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		writeMetricToFile(file, metricName, getInstanceDimension(instanceId), "AWS/EC2", startTime, period, statistic, unit);
+	}
+	
+	public static void writeMetricToFile(Path file, String metricName, Dimension dim, String namespace, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		List<Datapoint> datapoints = getMetric(metricName, dim, namespace, startTime, period, statistic, unit);
 		try (PrintWriter out = new PrintWriter(file.toFile())) {
 			out.println("Timestamp,Metric,Statistic,Value,Unit");
 			for (Datapoint d : datapoints) {
@@ -127,11 +155,19 @@ public class CloudWatch {
 				default:
 					value = d.getAverage();
 				}
-				out.println(d.getTimestamp().getTime() + "," + metricName + "," + statistic.name() + "," + value + "," + d.getUnit());
+				out.println(d.getTimestamp().getTime() + "," + metricName + "," + statistic.name() + "," + doubleFormatter.format(value) + "," + d.getUnit());
 			}
 			
 			out.flush();
 		}
 	}
+	
+	private static DecimalFormat doubleFormatter() {
+		DecimalFormatSymbols otherSymbols = new DecimalFormatSymbols(Locale.getDefault());
+		otherSymbols.setDecimalSeparator('.');
+		DecimalFormat myFormatter = new DecimalFormat("0.000", otherSymbols);
+		return myFormatter;
+	}
+	private static DecimalFormat doubleFormatter = doubleFormatter();
 
 }
