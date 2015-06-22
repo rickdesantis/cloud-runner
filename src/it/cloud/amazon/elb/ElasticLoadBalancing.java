@@ -1,7 +1,7 @@
 package it.cloud.amazon.elb;
 
+import it.cloud.amazon.Configuration;
 import it.cloud.amazon.ec2.AmazonEC2;
-import it.cloud.amazon.ec2.Configuration;
 
 import java.util.ArrayList;
 import java.util.List;

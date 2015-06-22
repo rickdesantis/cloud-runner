@@ -1,5 +1,6 @@
 package it.cloud.amazon.ec2;
 
+import it.cloud.amazon.Configuration;
 import it.cloud.utils.CloudException;
 import it.cloud.utils.Ssh;
 

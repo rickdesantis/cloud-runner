@@ -3,6 +3,7 @@ package it.cloud.amazon.ec2;
 import it.cloud.CloudService;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
+import it.cloud.amazon.Configuration;
 import it.cloud.amazon.ec2.VirtualMachine.FirewallRule;
 import it.cloud.amazon.ec2.VirtualMachine.InstanceStatus;
 import it.cloud.utils.CloudException;

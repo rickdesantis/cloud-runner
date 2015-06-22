@@ -1,8 +1,8 @@
 package it.cloud.utils;
 
+import it.cloud.Configuration;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
-import it.cloud.amazon.ec2.Configuration;
 
 import java.io.File;
 import java.io.FileInputStream;

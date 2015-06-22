@@ -1,6 +1,6 @@
 package it.cloud.utils.rest;
 
-import it.cloud.amazon.ec2.Configuration;
+import it.cloud.Configuration;
 
 import java.io.IOException;
 import java.util.ArrayList;
