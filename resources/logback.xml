@@ -44,7 +44,7 @@
 	
 	<logger name="com.amazonaws" level="WARN" />
 	
-	<logger name="org.apache.http.wire" level="WARN" />
+	<logger name="org.apache" level="WARN" />
 
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />
