@@ -1,6 +1,7 @@
 package it.cloud.amazon.ec2;
 
 import it.cloud.amazon.Configuration;
+import it.cloud.amazon.cloudwatch.CloudWatch;
 import it.cloud.utils.CloudException;
 import it.cloud.utils.Ssh;
 
@@ -8,6 +9,7 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.cloudwatch.model.StandardUnit;
+import com.amazonaws.services.cloudwatch.model.Statistic;
 import com.amazonaws.services.ec2.model.BlockDeviceMapping;
 import com.amazonaws.services.ec2.model.CancelSpotInstanceRequestsRequest;
 import com.amazonaws.services.ec2.model.CreateTagsRequest;
@@ -393,6 +397,27 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 					Paths.get(localPath, i.getName() + count, fileName).toFile().getParentFile().mkdirs();
 					
 					i.receiveFile(Paths.get(localPath, i.getName() + count, fileName).toString(), actualRemotePath);
+				}
+				
+				count++;
+			}
+	}
+	
+	public void retrieveMetrics(String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		String metricsToBeGet = getParameter("METRICS");
+		if (metricsToBeGet != null)
+			retrieveMetrics(metricsToBeGet.split(";"), localPath, date, period, statistic, unit);
+	}
+	
+	public void retrieveMetrics(String[] metricsToBeGet, String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		int count = 1;
+		if (metricsToBeGet != null && metricsToBeGet.length > 0)
+			for (Instance i : instancesSet) {
+				for (String s : metricsToBeGet) {
+					Path file = Paths.get(localPath, i.getName() + count, s + ".csv");
+					file.toFile().getParentFile().mkdirs();
+					
+					CloudWatch.writeInstanceMetricToFile(file, s, i.id, date, period, statistic, unit);
 				}
 				
 				count++;

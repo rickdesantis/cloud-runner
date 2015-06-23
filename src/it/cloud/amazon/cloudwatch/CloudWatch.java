@@ -2,16 +2,11 @@ package it.cloud.amazon.cloudwatch;
 
 import it.cloud.amazon.Configuration;
 
-import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
-import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
-import com.amazonaws.services.cloudwatch.model.Datapoint;
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsResult;
@@ -93,11 +87,11 @@ public class CloudWatch {
 		return dim;
 	}
 	
-	public static List<Datapoint> getInstanceMetric(String metricName, String instanceId, Date startTime, int period, Statistic statistic, StandardUnit unit) {
+	public static List<Datum> getInstanceMetric(String metricName, String instanceId, Date startTime, int period, Statistic statistic, StandardUnit unit) {
 		return getMetric(metricName, getInstanceDimension(instanceId), "AWS/EC2", startTime, period, statistic, unit);
 	}
 	
-	public static List<Datapoint> getMetric(String metricName, Dimension dim, String namespace, Date startTime, int period, Statistic statistic, StandardUnit unit) {
+	public static List<Datum> getMetric(String metricName, Dimension dim, String namespace, Date startTime, int period, Statistic statistic, StandardUnit unit) {
 		connect();
 		
 		GetMetricStatisticsRequest req = new GetMetricStatisticsRequest();
@@ -127,21 +121,7 @@ public class CloudWatch {
 		req.setStatistics(statistics);
 		
 		GetMetricStatisticsResult res = client.getMetricStatistics(req);
-		return res.getDatapoints();
-	}
-	
-	public static void writeAllInstanceMetricsToFiles(Path parent, String[] metricNames, String instanceId, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
-		writeAllMetricsToFiles(parent, metricNames, getInstanceDimension(instanceId), "AWS/EC2", startTime, period, statistic, unit);
-	}
-	
-	public static void writeAllMetricsToFiles(Path parent, String[] metricNames, Dimension dim, String namespace, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
-		if (parent == null || parent.toFile().exists())
-			throw new RuntimeException("You need to specify a valid parent.");
-		if (metricNames.length == 0)
-			return;
-		
-		for (String metricName : metricNames)
-			writeMetricToFile(Paths.get(parent.toString(), metricName + ".csv"), metricName, dim, namespace, startTime, period, statistic, unit);
+		return Datum.getAllData(res.getDatapoints(), metricName, statistic);
 	}
 	
 	public static void writeInstanceMetricToFile(Path file, String metricName, String instanceId, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
@@ -149,40 +129,8 @@ public class CloudWatch {
 	}
 	
 	public static void writeMetricToFile(Path file, String metricName, Dimension dim, String namespace, Date startTime, int period, Statistic statistic, StandardUnit unit) throws Exception {
-		List<Datapoint> datapoints = getMetric(metricName, dim, namespace, startTime, period, statistic, unit);
-		try (PrintWriter out = new PrintWriter(file.toFile())) {
-			out.println("Timestamp,Metric,Statistic,Value,Unit");
-			for (Datapoint d : datapoints) {
-				double value = 0;
-				switch (statistic) {
-				case Sum:
-					value = d.getSum();
-					break;
-				case Maximum:
-					value = d.getMaximum();
-					break;
-				case Minimum:
-					value = d.getMinimum();
-					break;
-				case SampleCount:
-					value = d.getSampleCount();
-					break;
-				default:
-					value = d.getAverage();
-				}
-				out.println(d.getTimestamp().getTime() + "," + metricName + "," + statistic.name() + "," + doubleFormatter.format(value) + "," + d.getUnit());
-			}
-			
-			out.flush();
-		}
+		List<Datum> data = getMetric(metricName, dim, namespace, startTime, period, statistic, unit);
+		Datum.writeAllData(file, data);
 	}
-	
-	private static DecimalFormat doubleFormatter() {
-		DecimalFormatSymbols otherSymbols = new DecimalFormatSymbols(Locale.getDefault());
-		otherSymbols.setDecimalSeparator('.');
-		DecimalFormat myFormatter = new DecimalFormat("0.000", otherSymbols);
-		return myFormatter;
-	}
-	private static DecimalFormat doubleFormatter = doubleFormatter();
 
 }
