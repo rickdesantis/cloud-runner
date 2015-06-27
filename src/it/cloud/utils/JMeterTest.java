@@ -136,6 +136,10 @@ public class JMeterTest {
 				}
 				
 				{
+					int ramp = 10;
+					if (values.length >= 4)
+						ramp = Integer.valueOf(values[3]);
+					
 					Element colp1 = doc.createElement("collectionProp");
 					colp1.appendChild(doc.createTextNode("\n"));
 					colp1.setAttribute("name", nameProp);
@@ -147,16 +151,16 @@ public class JMeterTest {
 					Element prop2 = doc.createElement("stringProp");
 					String st = String.valueOf(start_time);
 					prop2.appendChild(doc.createTextNode(st));
-					start_time = start_time + (int) Double.parseDouble(values[1]) + 20;
+					start_time = start_time + (int) Double.parseDouble(values[1]) + (ramp * 2);
 					prop2.setAttribute("name", "2");
 					Element prop3 = doc.createElement("stringProp");
-					prop3.appendChild(doc.createTextNode("10"));
+					prop3.appendChild(doc.createTextNode(Integer.valueOf(ramp).toString()));
 					prop3.setAttribute("name", "3");
 					Element prop4 = doc.createElement("stringProp");
 					prop4.appendChild(doc.createTextNode(values[1]));
 					prop4.setAttribute("name", "4");
 					Element prop5 = doc.createElement("stringProp");
-					prop5.appendChild(doc.createTextNode("10"));
+					prop5.appendChild(doc.createTextNode(Integer.valueOf(ramp).toString()));
 					prop5.setAttribute("name", "5");
 	
 					colp1.appendChild(prop1);
