@@ -116,7 +116,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 			String ami = prop.getProperty(name + "_AMI");
 			String size = prop.getProperty(name + "_SIZE");
-			boolean notOverrideSize = Boolean.parseBoolean(prop.getProperty(name + "_NOT_OVERRIDE_TYPE"));
+			boolean notOverrideSize = Boolean.parseBoolean(prop.getProperty(name + "_DONT_OVERRIDE_TYPE"));
 			if (overrideSize != null && !notOverrideSize)
 				size = overrideSize;
 			String instances = prop.getProperty(name + "_INSTANCES");
