@@ -61,22 +61,22 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 	private String os;
 	private String keyName;
 	private List<Instance> instancesSet;
-	
+
 	@Override
 	public int getInstancesNeeded() {
 		return instances;
 	}
-	
+
 	@Override
 	public int getInstancesRunning() {
 		return instancesSet.size();
 	}
-	
+
 	@Override
 	public String getSize() {
 		return size;
 	}
-	
+
 	@Override
 	public String getImageId() {
 		return ami;
@@ -100,11 +100,11 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 	public String getParameter(String name) {
 		return otherParams.get(name);
 	}
-	
+
 	public static VirtualMachine getVM(String name) throws CloudException {
 		return getVM(name, null, -1);
 	}
-	
+
 	public static VirtualMachine getVM(String name, String overrideSize) throws CloudException {
 		return getVM(name, overrideSize, -1);
 	}
@@ -116,7 +116,8 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 			String ami = prop.getProperty(name + "_AMI");
 			String size = prop.getProperty(name + "_SIZE");
-			if (overrideSize != null)
+			boolean notOverrideSize = Boolean.parseBoolean(prop.getProperty(name + "_NOT_OVERRIDE_TYPE"));
+			if (overrideSize != null && !notOverrideSize)
 				size = overrideSize;
 			String instances = prop.getProperty(name + "_INSTANCES");
 			if (overrideInstances > 0)
@@ -214,7 +215,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 			logger.info("No more instances will be launched because there are already enough.");
 			return;
 		}
-		
+
 		com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 		RequestSpotInstancesRequest requestRequest = new RequestSpotInstancesRequest();
@@ -260,17 +261,17 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 			instancesSet.add(new Instance(this, req.getInstanceId(), req
 					.getSpotInstanceRequestId()));
 	}
-	
+
 	public void onDemandRequest() {
 		if (instances <= instancesSet.size()) {
 			logger.info("No more instances will be launched because there are already enough.");
 			return;
 		}
-		
+
 		com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 		RunInstancesRequest request = new RunInstancesRequest();
-		
+
 //		request.setMinCount(instances);
 //		request.setMaxCount(instances);
 		request.setMinCount(instances - instancesSet.size());
@@ -291,20 +292,20 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 		ArrayList<BlockDeviceMapping> blockList = new ArrayList<BlockDeviceMapping>();
 		blockList.add(blockDeviceMapping);
-		
+
 		request.setBlockDeviceMappings(blockList);
 
 		ArrayList<String> securityGroups = new ArrayList<String>();
 		securityGroups.add(Configuration.SECURITY_GROUP_NAME);
-		
+
 		request.setSecurityGroups(securityGroups);
 		request.setKeyName(keyName);
-		
+
 		RunInstancesResult requestResult = client.runInstances(request);
 
 		Reservation reservation = requestResult.getReservation();
 		reservation.getInstances();
-		
+
 		for (com.amazonaws.services.ec2.model.Instance i : reservation.getInstances())
 			instancesSet.add(new Instance(this, i.getInstanceId(), null));
 	}
@@ -337,11 +338,11 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 		return true;
 	}
-	
+
 	public void setNameToInstances() {
 		setNameToInstances(name);
 	}
-	
+
 	public void setNameToInstances(String name) {
 		for (Instance i : instancesSet)
 			i.setName(name);
@@ -356,7 +357,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 		instancesSet.clear();
 	}
-	
+
 	public void reboot() {
 		if (instancesSet.size() == 0)
 			return;
@@ -364,21 +365,21 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 		for (Instance i : instancesSet)
 			i.reboot();
 	}
-	
+
 	public void addRunningInstance(String id, String spotRequestId) {
 		for (Instance i : instancesSet)
 			if (i.id.equals(id))
 				return;
-		
+
 		instancesSet.add(new Instance(this, id, spotRequestId));
 	}
-	
+
 	public void retrieveFiles(String localPath, String remotePath) throws Exception {
 		String filesToBeGet = getParameter("RETRIEVE_FILES");
 		if (filesToBeGet != null)
 			retrieveFiles(filesToBeGet.split(";"), localPath, remotePath);
 	}
-	
+
 	public void retrieveFiles(String[] filesToBeGet, String localPath, String remotePath) throws Exception {
 		int count = 1;
 		if (filesToBeGet != null && filesToBeGet.length > 0)
@@ -389,26 +390,26 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 						actualRemotePath = s;
 					else
 						actualRemotePath = Paths.get(remotePath, s).toString();
-					
+
 					String fileName = s;
 					if (s.startsWith("/"))
 						fileName = s.substring(1);
-					
+
 					Paths.get(localPath, i.getName() + count, fileName).toFile().getParentFile().mkdirs();
-					
+
 					i.receiveFile(Paths.get(localPath, i.getName() + count, fileName).toString(), actualRemotePath);
 				}
-				
+
 				count++;
 			}
 	}
-	
+
 	public void retrieveMetrics(String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
 		String metricsToBeGet = getParameter("METRICS");
 		if (metricsToBeGet != null)
 			retrieveMetrics(metricsToBeGet.split(";"), localPath, date, period, statistic, unit);
 	}
-	
+
 	public void retrieveMetrics(String[] metricsToBeGet, String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
 		int count = 1;
 		if (metricsToBeGet != null && metricsToBeGet.length > 0)
@@ -416,20 +417,20 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 				for (String s : metricsToBeGet) {
 					Path file = Paths.get(localPath, i.getName() + count, s + ".csv");
 					file.toFile().getParentFile().mkdirs();
-					
+
 					CloudWatch.writeInstanceMetricToFile(file, s, i.id, date, period, statistic, unit);
 				}
-				
+
 				count++;
 			}
 	}
-	
+
 	public void deleteFiles() throws Exception {
 		String filesToBeDeleted = getParameter("DELETE_FILES");
 		if (filesToBeDeleted != null)
 			deleteFiles(filesToBeDeleted.split(";"));
 	}
-	
+
 	public void deleteFiles(String[] filesToBeDeleted) throws Exception {
 		if (filesToBeDeleted != null && filesToBeDeleted.length > 0)
 			for (String s : filesToBeDeleted) {
@@ -471,13 +472,13 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 		public String getParameter(String name) {
 			return vm.getParameter(name);
 		}
-		
+
 
 		@Override
 		public String getName() {
 			return vm.name;
 		}
-		
+
 		@Override
 		public Path getKey() {
 			return Configuration.getPathToFile(vm.keyName + ".pem");
@@ -504,10 +505,10 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 		public void sendFile(String lfile, String rfile) throws Exception {
 			Ssh.sendFile(this, lfile, rfile);
 		}
-		
+
 		public void reboot() {
 			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
-			
+
 			RebootInstancesRequest req = new RebootInstancesRequest();
 			List<String> instanceIds = new ArrayList<String>();
 			instanceIds.add(id);
@@ -515,19 +516,19 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 			client.rebootInstances(req);
 		}
-		
+
 		public void setName(String name) {
 			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
-			
+
 			CreateTagsRequest req = new CreateTagsRequest();
 			List<String> instanceIds = new ArrayList<String>();
 			instanceIds.add(id);
 			req.withResources(instanceIds);
-			
+
 			List<Tag> tags = new ArrayList<Tag>();
 			tags.add(new Tag("Name", name));
 			req.setTags(tags);
-			
+
 			client.createTags(req);
 		}
 
@@ -621,7 +622,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 				return InstanceStatus.INSTANCE_NOT_FOUND;
 			}
 		}
-		
+
 		public static InstanceStatus getInstanceStatus(String id) {
 			if (id == null) {
 				return InstanceStatus.INSTANCE_NOT_FOUND;
@@ -662,7 +663,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 		private void terminateSpotRequest() throws AmazonServiceException {
 			if (spotRequestId == null)
 				return;
-			
+
 			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 			List<String> spotInstanceRequestIds = new ArrayList<String>();
@@ -676,7 +677,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 		private void terminateInstance() throws AmazonServiceException {
 			if (id == null)
 				return;
-			
+
 			com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
 			List<String> instanceIds = new ArrayList<String>();
@@ -743,9 +744,9 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 			return true;
 		}
-		
+
 		public static final long TIMEOUT = 60000;
-		
+
 		public boolean waitUntilSshAvailable() {
 			long init = System.currentTimeMillis();
 			long end = init;
