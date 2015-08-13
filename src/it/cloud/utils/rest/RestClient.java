@@ -48,7 +48,7 @@ public class RestClient {
 
 		Representation representation = null;
 		Status status = null;
-		
+
 		if (method == Method.POST)
 			representation = request.post(body);
 		else if (method == Method.PUT)
@@ -63,7 +63,7 @@ public class RestClient {
 			} catch (IOException e) {
 				throw new Exception("Error while getting the answer.", e);
 			}
-			
+
 			status = request.getStatus();
 		} else {
 			throw new Exception("Method not recognized.");
@@ -74,10 +74,10 @@ public class RestClient {
 		} catch (Exception e) {
 			throw new Exception("Error while stopping the REST client!", e);
 		}
-		
+
 		return status;
 	}
-	
+
 	public String getAnswerForMessage(String path, String body, Method method)
 			throws Exception {
 		Client client = new Client(new Context(), Protocol.HTTP);
@@ -87,7 +87,7 @@ public class RestClient {
 
 		Representation representation = null;
 		String answer = null;
-		
+
 		if (method == Method.POST)
 			representation = request.post(body);
 		else if (method == Method.PUT)
@@ -112,14 +112,14 @@ public class RestClient {
 		} catch (Exception e) {
 			throw new Exception("Error while stopping the REST client!", e);
 		}
-		
+
 		return answer;
 	}
 
 	public Status sendMessageFromFile(String path, String filePath,
 			Method method, Object... substitutions) throws Exception {
 		String body = FileUtils.readFileToString(Configuration.getPathToFile(filePath).toFile());
-		
+
 		if (body == null || body.length() == 0)
 			throw new Exception("The file read is empty.");
 

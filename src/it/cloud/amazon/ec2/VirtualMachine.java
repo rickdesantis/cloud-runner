@@ -1,10 +1,5 @@
 package it.cloud.amazon.ec2;
 
-import it.cloud.amazon.Configuration;
-import it.cloud.amazon.cloudwatch.CloudWatch;
-import it.cloud.utils.CloudException;
-import it.cloud.utils.Ssh;
-
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,6 +38,11 @@ import com.amazonaws.services.ec2.model.SpotInstanceRequest;
 import com.amazonaws.services.ec2.model.Tag;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.util.Base64;
+
+import it.cloud.amazon.Configuration;
+import it.cloud.amazon.cloudwatch.CloudWatch;
+import it.cloud.utils.CloudException;
+import it.cloud.utils.Ssh;
 
 public class VirtualMachine implements it.cloud.VirtualMachine {
 
@@ -376,8 +376,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 	public void retrieveFiles(String localPath, String remotePath) throws Exception {
 		String filesToBeGet = getParameter("RETRIEVE_FILES");
-		if (filesToBeGet != null)
-			retrieveFiles(filesToBeGet.split(";"), localPath, remotePath);
+		retrieveFiles(filesToBeGet.split(";"), localPath, remotePath);
 	}
 
 	public void retrieveFiles(String[] filesToBeGet, String localPath, String remotePath) throws Exception {
@@ -401,6 +400,30 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 				}
 
 				count++;
+			}
+	}
+	
+	public static void retrieveFiles(String ip, VirtualMachine vm, int count, String localPath, String remotePath) throws Exception {
+		String filesToBeGet = vm.getParameter("RETRIEVE_FILES");
+		retrieveFiles(ip, vm, count, filesToBeGet.split(";"), localPath, remotePath);
+	}
+	
+	public static void retrieveFiles(String ip, VirtualMachine vm, int count, String[] filesToBeGet, String localPath, String remotePath) throws Exception {
+		if (filesToBeGet != null && filesToBeGet.length > 0)
+			for (String s : filesToBeGet) {
+				String actualRemotePath;
+				if (s.startsWith("/"))
+					actualRemotePath = s;
+				else
+					actualRemotePath = Paths.get(remotePath, s).toString();
+
+				String fileName = s;
+				if (s.startsWith("/"))
+					fileName = s.substring(1);
+
+				Paths.get(localPath, vm.name + count, fileName).toFile().getParentFile().mkdirs();
+
+				Ssh.receiveFile(ip, vm, Paths.get(localPath, vm.name + count, fileName).toString(), actualRemotePath);
 			}
 	}
 
