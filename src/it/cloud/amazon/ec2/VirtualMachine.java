@@ -450,8 +450,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 	public void deleteFiles() throws Exception {
 		String filesToBeDeleted = getParameter("DELETE_FILES");
-		if (filesToBeDeleted != null)
-			deleteFiles(filesToBeDeleted.split(";"));
+		deleteFiles(filesToBeDeleted.split(";"));
 	}
 
 	public void deleteFiles(String[] filesToBeDeleted) throws Exception {
@@ -462,6 +461,20 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 							"rm -rf %s",
 							s));
 				}
+			}
+	}
+	
+	public static void deleteFiles(String ip, VirtualMachine vm) throws Exception {
+		String filesToBeDeleted = vm.getParameter("DELETE_FILES");
+		deleteFiles(ip, vm, filesToBeDeleted.split(";"));
+	}
+
+	public static void deleteFiles(String ip, VirtualMachine vm, String[] filesToBeDeleted) throws Exception {
+		if (filesToBeDeleted != null && filesToBeDeleted.length > 0)
+			for (String s : filesToBeDeleted) {
+				Ssh.exec(ip, vm, String.format(
+						"rm -rf %s",
+						s));
 			}
 	}
 
