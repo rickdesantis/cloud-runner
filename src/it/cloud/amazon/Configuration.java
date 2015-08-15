@@ -1,7 +1,6 @@
 package it.cloud.amazon;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,7 +42,7 @@ public abstract class Configuration extends it.cloud.Configuration {
 	}
 	
 	public static void loadConfiguration(String filePath) throws IOException {
-		ConfigurationFile conf = ConfigurationFile.parse(Paths.get(filePath)).getElement(CloudService.PROVIDERS_KEY).getElement("Amazon");
+		ConfigurationFile conf = ConfigurationFile.parse(getPathToFile(filePath)).getElement(CloudService.PROVIDERS_KEY).getElement("Amazon");
 		REGION = conf.getString(CloudService.REGION_KEY, REGION);
 		PRICE_MARGIN = conf.getDouble(CloudService.PRICE_MARGIN_KEY, PRICE_MARGIN);
 		SECURITY_GROUP_NAME = conf.getString(CloudService.SECURITY_GROUP_NAME_KEY, SECURITY_GROUP_NAME);
