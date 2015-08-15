@@ -9,8 +9,7 @@ import java.nio.file.Paths;
 
 public abstract class Configuration {
 	
-	public static final String CREDENTIALS = "credentials.properties";
-	public static final String CONFIGURATION = "configuration.properties";
+	public static final String CONFIGURATION = "configuration.json";
 	public static final String FIREWALL_RULES = "firewallrules.csv";
 
 	public static InputStream getInputStream(String filePath) {

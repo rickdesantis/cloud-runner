@@ -8,7 +8,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Scanner;
 
 import org.slf4j.Logger;
@@ -42,13 +41,12 @@ import com.amazonaws.util.Base64;
 import it.cloud.amazon.Configuration;
 import it.cloud.amazon.cloudwatch.CloudWatch;
 import it.cloud.utils.CloudException;
+import it.cloud.utils.ConfigurationFile;
 import it.cloud.utils.Ssh;
 
 public class VirtualMachine implements it.cloud.VirtualMachine {
 
 	private static final Logger logger = LoggerFactory.getLogger(VirtualMachine.class);
-
-	public static double PRICE_MARGIN = 0.2;
 
 	private String ami;
 	private int instances;
@@ -111,34 +109,38 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 
 	public static VirtualMachine getVM(String name, String overrideSize, int overrideInstances) throws CloudException {
 		try {
-			Properties prop = new Properties();
-			prop.load(Configuration.getInputStream(Configuration.CONFIGURATION));
+			ConfigurationFile conf = ConfigurationFile.parse().getElement(MACHINES_KEY);
+			if (!conf.hasElement(name))
+				throw new CloudException("VM not found in the configuration file!");
+			
+			conf = conf.getElement(name);
+			
+			String provider = conf.getString(PROVIDER_KEY);
+			if (provider != null && !provider.equals("Amazon"))
+				throw new CloudException("This VM is on another provider!");
 
-			String ami = prop.getProperty(name + "_AMI");
-			String size = prop.getProperty(name + "_SIZE");
-			boolean notOverrideSize = Boolean.parseBoolean(prop.getProperty(name + "_DONT_OVERRIDE_TYPE"));
+			String ami = conf.getString(IMAGE_ID_KEY);
+			String size = conf.getString(SIZE_KEY);
+			boolean notOverrideSize = Boolean.parseBoolean(conf.getString(DONT_OVERRIDE_TYPE_KEY));
 			if (overrideSize != null && !notOverrideSize)
 				size = overrideSize;
-			String instances = prop.getProperty(name + "_INSTANCES");
+			int instances = conf.getInt(INSTANCES_KEY);
 			if (overrideInstances > 0)
-				instances = Integer.valueOf(overrideInstances).toString();
-			String diskSize = prop.getProperty(name + "_DISK");
-			String os = prop.getProperty(name + "_OS");
-			String keyName = prop.getProperty(name + "_KEYPAIR_NAME");
-			String sshUser = prop.getProperty(name + "_SSH_USER");
-			String sshPassword = prop.getProperty(name + "_SSH_PASS");
+				instances = overrideInstances;
+			int diskSize = conf.getInt(DISC_KEY);
+			String os = conf.getString(OS_KEY);
+			String keyName = conf.getString(KEYPAIR_NAME_KEY);
+			String sshUser = conf.getString(SSH_USER_KEY);
+			String sshPassword = conf.getString(SSH_PASS_KEY);
 
 			Map<String, String> otherParams = new HashMap<String, String>();
 
-			for (Object o : prop.keySet()) {
-				String key = (String) o;
-				if (key.startsWith(name + "_"))
-					otherParams.put(key.substring((name + "_").length()),
-							prop.getProperty(key));
+			for (String key : conf.keys()) {
+				otherParams.put(key.toUpperCase(), conf.getString(key));
 			}
 
-			if (ami != null && size != null && instances != null
-					&& diskSize != null && os != null && keyName != null
+			if (ami != null && size != null && instances != 0
+					&& diskSize != 0 && os != null && keyName != null
 					&& sshUser != null && sshPassword != null) {
 				double[] pricesInRegion = AmazonEC2.getPricesInRegion(size, os);
 				if (pricesInRegion.length == 0)
@@ -148,18 +150,18 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 					if (pricesInRegion[i] > maxPrice)
 						maxPrice = pricesInRegion[i];
 
-				maxPrice += PRICE_MARGIN;
+				maxPrice += Configuration.PRICE_MARGIN;
 
 				return new VirtualMachine(name, ami,
-						Integer.valueOf(instances), size,
-						Integer.valueOf(diskSize), maxPrice, os, keyName,
+						instances, size,
+						diskSize, maxPrice, os, keyName,
 						sshUser, sshPassword, otherParams);
 			}
+			throw new CloudException("The configuration for the VM isn't correct.");
 		} catch (Exception e) {
 			throw new CloudException("Error while loading the configuration.",
 					e);
 		}
-		throw new CloudException("VM not found in the configuration file!");
 	}
 
 	public VirtualMachine(String name, String ami, int instances, String size,

@@ -1,22 +1,12 @@
 package it.cloud.amazon.ec2;
 
-import it.cloud.CloudService;
-import it.cloud.Instance;
-import it.cloud.VirtualMachine;
-import it.cloud.amazon.Configuration;
-import it.cloud.amazon.ec2.VirtualMachine.FirewallRule;
-import it.cloud.amazon.ec2.VirtualMachine.InstanceStatus;
-import it.cloud.utils.CloudException;
-
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Scanner;
 
 import org.slf4j.Logger;
@@ -44,6 +34,15 @@ import com.amazonaws.services.ec2.model.IpPermission;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SecurityGroup;
 import com.amazonaws.services.ec2.model.SpotInstanceRequest;
+
+import it.cloud.CloudService;
+import it.cloud.Instance;
+import it.cloud.VirtualMachine;
+import it.cloud.amazon.Configuration;
+import it.cloud.amazon.ec2.VirtualMachine.FirewallRule;
+import it.cloud.amazon.ec2.VirtualMachine.InstanceStatus;
+import it.cloud.utils.CloudException;
+import it.cloud.utils.ConfigurationFile;
 
 public class AmazonEC2 implements CloudService {
 	
@@ -186,15 +185,12 @@ public class AmazonEC2 implements CloudService {
 	@Override
 	public String getVMNameByImageId(String imageId) {
 		try {
-			Properties prop = new Properties();
-			prop.load(Configuration.getInputStream(Configuration.CONFIGURATION));
+			ConfigurationFile conf = ConfigurationFile.parse().getElement(VirtualMachine.MACHINES_KEY);
 			
-			Enumeration<?> e = prop.propertyNames();
-			while (e.hasMoreElements()) {
-				String key = (String) e.nextElement(); 
-				if (key.endsWith("_AMI") && prop.getProperty(key).equals(imageId)) {
-					return key.substring(0, key.lastIndexOf("_AMI"));
-				}
+			for (String key : conf.keys()) {
+				ConfigurationFile machine = conf.getElement(key);
+				if (machine.getString(VirtualMachine.IMAGE_ID_KEY).equals(imageId))
+					return key;
 			}
 			
 		} catch (Exception e) { }
