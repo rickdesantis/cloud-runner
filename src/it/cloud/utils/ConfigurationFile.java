@@ -21,6 +21,8 @@ import it.cloud.amazon.Configuration;
 public abstract class ConfigurationFile {
 	
 	private static final Logger logger = LoggerFactory.getLogger(ConfigurationFile.class);
+	
+	protected String prefixToString = "";
 
 	public static ConfigurationFile parse() throws FileNotFoundException, IOException {
 		return parse(Configuration.getPathToFile(Configuration.CONFIGURATION));
@@ -54,28 +56,61 @@ public abstract class ConfigurationFile {
 		}
 		return false;
 	}
+	public String toString() {
+		String[] keys = keys();
+		if (keys.length == 0)
+			return "{}";
+		else {
+			StringBuilder sb = new StringBuilder("{\n");
+			for (String tmp : keys) {
+				String value = getString(tmp);
+				sb.append(prefixToString);
+				sb.append("\t");
+				sb.append(tmp);
+				sb.append(": ");
+				sb.append(value);
+				sb.append(",\n");
+			}
+			sb.deleteCharAt(sb.length() - 2);
+			sb.append(prefixToString);
+			sb.append("}");
+			return sb.toString();
+		}
+	}
 	
 	public static class PropertiesFile extends ConfigurationFile {
 		private Properties prop;
 		private Path p;
 		private String baseKey;
 		
-		private PropertiesFile(Path p, String baseKey) throws FileNotFoundException, IOException {
+		private PropertiesFile(Path p, String baseKey, String prefixToString) throws FileNotFoundException, IOException {
 			this.p = p;
 			if (baseKey == null)
 				baseKey = "";
 			this.baseKey = baseKey;
+			this.prefixToString = prefixToString;
 			
 			prop = new Properties();
 			prop.load(new FileInputStream(p.toFile()));
 		}
 		
+		private PropertiesFile(Path p, String baseKey) throws FileNotFoundException, IOException {
+			this(p, baseKey, "");
+		}
+		
 		public PropertiesFile(Path p) throws FileNotFoundException, IOException {
-			this(p, "");
+			this(p, "", "");
 		}
 		
 		public String getString(String key, String defaultValue) {
-			return prop.getProperty(baseKey + key.toUpperCase(), defaultValue);
+			String value = prop.getProperty(baseKey + key.toUpperCase(), defaultValue);
+			if (value == null || value.equals(defaultValue)) {
+				try {
+					value = new PropertiesFile(p, baseKey + key + PREFIX_SEPARATOR, prefixToString + "\t").toString();
+					return value;
+				} catch (IOException e) { }
+			}
+			return value;
 		}
 		
 		public String getString(String key) {
@@ -214,8 +249,27 @@ public abstract class ConfigurationFile {
 			this.obj = obj;
 		}
 		
+		private JSONFile(JSONObject obj, String prefixToString) {
+			this(obj);
+			this.prefixToString = prefixToString;
+		}
+		
 		public String getString(String key, String defaultValue) {
-			return String.valueOf(get(key, defaultValue));
+			Object value = get(key, defaultValue);
+			if (value instanceof JSONArray) {
+				String[] res = getStrings(key);
+				StringBuilder sb = new StringBuilder();
+				for (String s : res) {
+					sb.append(s);
+					sb.append(";");
+				}
+				sb.deleteCharAt(sb.length() - 1);
+				return sb.toString();
+			} else if (value instanceof JSONObject) {
+				return new JSONFile((JSONObject)value, prefixToString + "\t").toString();
+			} else {
+				return String.valueOf(get(key, defaultValue));
+			}
 		}
 		
 		public String getString(String key) {
@@ -313,41 +367,13 @@ public abstract class ConfigurationFile {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		Path prop = Paths.get("/Users/ft/Development/workspace-s4c/modaclouds-tests/modaclouds-scalingsdatests/resources/configuration.properties");
 		Path json = Paths.get("/Users/ft/Development/workspace-s4c/modaclouds-tests/modaclouds-scalingsdatests/resources/configuration.json");
-		
+		Path prop = Paths.get("/Users/ft/Development/workspace-s4c/modaclouds-tests/modaclouds-scalingsdatests/resources/configuration.properties");
 		ConfigurationFile conf1 = ConfigurationFile.parse(json);
 		ConfigurationFile conf2 = ConfigurationFile.parse(prop);
 		
-		StringBuffer sb =  new StringBuffer("HTTPAgent.KEYS1:");
-		for (String s : conf1.getElement("machines").getElement("httpagent").keys()) {
-			sb.append("\n> ");
-			sb.append(s);
-		}
-		logger.debug(sb.toString());
-		
-		sb = new StringBuffer("HTTPAgent.KEYS2:");
-		for (String s : conf2.getElement("machines").getElement("httpagent").keys()) {
-			sb.append("\n> ");
-			sb.append(s);
-		}
-		logger.debug(sb.toString());
-		
-		sb = new StringBuffer("ROOT.KEYS1:");
-		for (String s : conf1.keys()) {
-			sb.append("\n> ");
-			sb.append(s);
-		}
-		logger.debug(sb.toString());
-		
-		sb = new StringBuffer("ROOT.KEYS2:");
-		for (String s : conf2.keys()) {
-			sb.append("\n> ");
-			sb.append(s);
-		}
-		logger.debug(sb.toString());
-		
-		logger.debug("LB.AMI1: {}", conf2.getElement("machines").getElement("lb").getString("AMI"));
+		logger.debug("\n{}", conf1.getElement("machines").getElement("lb").toString());
+		logger.debug("\n{}", conf2.getElement("machines").getElement("lb").toString());
 	}
 
 }
