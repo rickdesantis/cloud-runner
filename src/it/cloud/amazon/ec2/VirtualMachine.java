@@ -117,7 +117,7 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 			
 			String provider = conf.getString(PROVIDER_KEY);
 			if (provider != null && !provider.equals("Amazon"))
-				throw new CloudException("This VM is on another provider!");
+				logger.warn("You're considering this VM as if it was on Amazon, but it is on {} instead!", provider);
 
 			String ami = conf.getString(IMAGE_ID_KEY);
 			String size = conf.getString(SIZE_KEY);
