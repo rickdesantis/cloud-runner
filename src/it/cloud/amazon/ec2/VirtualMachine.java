@@ -484,40 +484,42 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 			}
 	}
 	
-	public void execStarter() {
+	public List<String> execStarter() throws Exception {
 		String cmd = getParameter("STARTER");
 		if (cmd != null)
-			exec(cmd);
+			return exec(cmd);
+		return new ArrayList<String>();
 	}
-	public void execStopper() {
+	public List<String> execStopper() throws Exception {
 		String cmd = getParameter("STOPPER");
 		if (cmd != null)
-			exec(cmd);
+			return exec(cmd);
+		return new ArrayList<String>();
 	}
-	public void execUpdater() {
+	public List<String> execUpdater() throws Exception {
 		String cmd = getParameter("UPDATER");
 		if (cmd != null)
-			exec(cmd);
+			return exec(cmd);
+		return new ArrayList<String>();
 	}
-	public void execDownloader() {
+	public List<String> execDownloader() throws Exception {
 		String cmd = getParameter("DOWNLOADER");
 		if (cmd != null)
-			exec(cmd);
+			return exec(cmd);
+		return new ArrayList<String>();
 	}
-	public void execInstaller() {
+	public List<String> execInstaller() throws Exception {
 		String cmd = getParameter("INSTALLER");
 		if (cmd != null)
-			exec(cmd);
+			return exec(cmd);
+		return new ArrayList<String>();
 	}
 	
-	public void exec(String cmd) {
-		for (Instance i : getInstances()) {
-			try {
-				i.exec(cmd);
-			} catch (Exception e) {
-				logger.error("Error while executing the script.", e);
-			}
-		}
+	public List<String> exec(String cmd) throws Exception {
+		List<String> res = new ArrayList<String>();
+		for (Instance i : getInstances())
+			res.addAll(i.exec(cmd));
+		return res;
 	}
 
 	public static class FirewallRule {
@@ -572,8 +574,8 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 			return vm.sshPassword;
 		}
 
-		public List<String> exec(String command) throws Exception {
-			return Ssh.exec(this, command);
+		public List<String> exec(String cmd) throws Exception {
+			return Ssh.exec(this, cmd);
 		}
 
 		public void receiveFile(String lfile, String rfile) throws Exception {
@@ -841,6 +843,37 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 				end = System.currentTimeMillis();
 			}
 			return done;
+		}
+		
+		public List<String> execStarter() throws Exception {
+			String cmd = getParameter("STARTER");
+			if (cmd != null)
+				return exec(cmd);
+			return new ArrayList<String>();
+		}
+		public List<String> execStopper() throws Exception {
+			String cmd = getParameter("STOPPER");
+			if (cmd != null)
+				return exec(cmd);
+			return new ArrayList<String>();
+		}
+		public List<String> execUpdater() throws Exception {
+			String cmd = getParameter("UPDATER");
+			if (cmd != null)
+				return exec(cmd);
+			return new ArrayList<String>();
+		}
+		public List<String> execDownloader() throws Exception {
+			String cmd = getParameter("DOWNLOADER");
+			if (cmd != null)
+				return exec(cmd);
+			return new ArrayList<String>();
+		}
+		public List<String> execInstaller() throws Exception {
+			String cmd = getParameter("INSTALLER");
+			if (cmd != null)
+				return exec(cmd);
+			return new ArrayList<String>();
 		}
 	}
 

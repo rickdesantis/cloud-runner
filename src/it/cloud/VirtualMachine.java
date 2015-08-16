@@ -15,11 +15,12 @@ public interface VirtualMachine {
 	public void deleteFiles(String[] filesToBeDeleted) throws Exception;
 	public String getParameter(String name);
 	
-	public void execStarter();
-	public void execStopper();
-	public void execUpdater();
-	public void execDownloader();
-	public void execInstaller();
+	public List<String> exec(String cmd) throws Exception;
+	public List<String> execStarter() throws Exception;
+	public List<String> execStopper() throws Exception;
+	public List<String> execUpdater() throws Exception;
+	public List<String> execDownloader() throws Exception;
+	public List<String> execInstaller() throws Exception;
 	public void terminate();
 	public void reboot();
 	
