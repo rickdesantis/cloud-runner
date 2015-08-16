@@ -483,6 +483,42 @@ public class VirtualMachine implements it.cloud.VirtualMachine {
 						s));
 			}
 	}
+	
+	public void execStarter() {
+		String cmd = getParameter("STARTER");
+		if (cmd != null)
+			exec(cmd);
+	}
+	public void execStopper() {
+		String cmd = getParameter("STOPPER");
+		if (cmd != null)
+			exec(cmd);
+	}
+	public void execUpdater() {
+		String cmd = getParameter("UPDATER");
+		if (cmd != null)
+			exec(cmd);
+	}
+	public void execDownloader() {
+		String cmd = getParameter("DOWNLOADER");
+		if (cmd != null)
+			exec(cmd);
+	}
+	public void execInstaller() {
+		String cmd = getParameter("INSTALLER");
+		if (cmd != null)
+			exec(cmd);
+	}
+	
+	public void exec(String cmd) {
+		for (Instance i : getInstances()) {
+			try {
+				i.exec(cmd);
+			} catch (Exception e) {
+				logger.error("Error while executing the script.", e);
+			}
+		}
+	}
 
 	public static class FirewallRule {
 

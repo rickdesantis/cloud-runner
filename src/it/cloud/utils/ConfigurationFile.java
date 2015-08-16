@@ -368,12 +368,11 @@ public abstract class ConfigurationFile {
 	
 	public static void main(String[] args) throws Exception {
 		Path json = Paths.get("/Users/ft/Development/workspace-s4c/modaclouds-tests/modaclouds-scalingsdatests/resources/configuration.json");
-		Path prop = Paths.get("/Users/ft/Development/workspace-s4c/modaclouds-tests/modaclouds-scalingsdatests/resources/configuration.properties");
-		ConfigurationFile conf1 = ConfigurationFile.parse(json);
-		ConfigurationFile conf2 = ConfigurationFile.parse(prop);
+		ConfigurationFile conf = ConfigurationFile.parse(json);
 		
-		logger.debug("\n{}", conf1.getElement("machines").getElement("lb").toString());
-		logger.debug("\n{}", conf2.getElement("machines").getElement("lb").toString());
+		logger.debug("\n{}", conf.getElement("machines").getElement("lb").toString());
+		
+		logger.debug("\n{}", conf.getElement("providers").toString());
 	}
 
 }

@@ -15,6 +15,14 @@ public interface VirtualMachine {
 	public void deleteFiles(String[] filesToBeDeleted) throws Exception;
 	public String getParameter(String name);
 	
+	public void execStarter();
+	public void execStopper();
+	public void execUpdater();
+	public void execDownloader();
+	public void execInstaller();
+	public void terminate();
+	public void reboot();
+	
 	public static final String MACHINES_KEY = "machines";
 	public static final String IMAGE_ID_KEY = "AMI";
 	public static final String SIZE_KEY = "size";
