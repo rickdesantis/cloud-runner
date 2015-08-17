@@ -18,6 +18,7 @@ import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.connection.channel.direct.Session.Command;
 import net.schmizz.sshj.transport.verification.HostKeyVerifier;
 import net.schmizz.sshj.xfer.FileSystemFile;
+import net.schmizz.sshj.xfer.scp.SCPException;
 
 public class Ssh {
 
@@ -148,6 +149,10 @@ public class Ssh {
 				ssh.newSCPFileTransfer().download(rfile, new FileSystemFile(lfile));
 				
 				logger.trace("Done!");
+			} catch (SCPException e) {
+				if (e.getMessage().contains("No such file or directory"))
+					logger.warn("No file or directory `{}` found on {}.", rfile, ip);
+				else throw e;
 			} finally {
 				session.close();
 			}
