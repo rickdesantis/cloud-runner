@@ -45,12 +45,14 @@
 	<logger name="com.amazonaws" level="WARN" />
 	
 	<logger name="org.apache" level="WARN" />
+	
+	<logger name="net.schmizz" level="WARN" />
 
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />
 	</root>
 	
-<!-- 	<root level="TRACE"> -->
-<!-- 		<appender-ref ref="FILE" /> -->
-<!-- 	</root> -->
+	<root level="TRACE">
+		<appender-ref ref="FILE" />
+	</root>
 </configuration>
