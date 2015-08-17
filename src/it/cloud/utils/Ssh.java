@@ -5,7 +5,6 @@ import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +64,7 @@ public class Ssh {
 
 	public static List<String> exec(String ip, String user, String password, String key, String command)
 			throws Exception {
-		List<String> res = new ArrayList<String>();
+		final List<String> res = new ArrayList<String>();
 		
 		logger.trace("Executing `{}` on {}...", command, ip);
 
@@ -76,15 +75,36 @@ public class Ssh {
 			try {
 				final Command cmd = session.exec(command);
 
-				try (Scanner sc = new Scanner(cmd.getInputStream())) {
-					while (sc.hasNextLine()) {
-						String line = sc.nextLine();
-						logger.trace(line);
-						res.add(line);
+				Thread in = new Thread() {
+					public void run() {
+						try (Scanner sc = new Scanner(cmd.getInputStream())) {
+							while (sc.hasNextLine()) {
+								String line = sc.nextLine();
+								logger.trace(line);
+								res.add(line);
+							}
+						}
 					}
-				}
+				};
+				in.start();
+				
+				Thread err = new Thread() {
+					public void run() {
+						try (Scanner sc = new Scanner(cmd.getErrorStream())) {
+							while (sc.hasNextLine()) {
+								String line = sc.nextLine();
+								logger.trace(line);
+								res.add(line);
+							}
+						}
+					}
+				};
+				err.start();
 
-				cmd.join(5, TimeUnit.SECONDS);
+				cmd.join();
+				in.join();
+				err.join();
+				
 				logger.trace("Done! Exit status: {}", cmd.getExitStatus());
 			} finally {
 				session.close();
