@@ -33,10 +33,6 @@ public class Ssh {
 	public static List<String> exec(Instance inst, String command) throws Exception {
 		return exec(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
 	}
-
-	public static void main(String[] args) throws Exception {
-		exec("52.18.49.135", "ubuntu", "ubuntu", "/Users/ft/Lavoro/tmp/da copiare dentro/desantis-ireland.pem", "source .bashrc_mpl && echo $MODACLOUDS_KNOWLEDGEBASE_ENDPOINT_IP");
-	}
 	
 	private static SSHClient getConnectedClient(String ip, String user, String password, String key) throws Exception {
 		if (password == null && key == null)
