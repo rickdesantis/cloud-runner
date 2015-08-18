@@ -1,9 +1,7 @@
 package it.cloud.utils;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,18 +9,12 @@ import org.slf4j.LoggerFactory;
 import it.cloud.Configuration;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
-import net.schmizz.keepalive.KeepAliveProvider;
-import net.schmizz.sshj.DefaultConfig;
-import net.schmizz.sshj.SSHClient;
-import net.schmizz.sshj.connection.channel.direct.Session;
-import net.schmizz.sshj.connection.channel.direct.Session.Command;
-import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
-import net.schmizz.sshj.xfer.FileSystemFile;
-import net.schmizz.sshj.xfer.scp.SCPException;
+import it.cloud.utils.ssh.Jsch;
+import it.cloud.utils.ssh.Sshj;
 
-public class Ssh {
+public abstract class Ssh {
 
-	private static final Logger logger = LoggerFactory.getLogger(Ssh.class);
+	protected static final Logger logger = LoggerFactory.getLogger(Ssh.class);
 
 	public static final int SSH_PORT = 22;
 
@@ -35,88 +27,25 @@ public class Ssh {
 		return exec(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
 	}
 	
-	private static SSHClient getConnectedClient(String ip, String user, String password, String key) throws Exception {
-		if (password == null && key == null)
-			throw new Exception("You need to provide one among the key and the password to be used.");
-		
-		DefaultConfig defaultConfig = new DefaultConfig();
-        defaultConfig.setKeepAliveProvider(KeepAliveProvider.KEEP_ALIVE);
-
-		final SSHClient ssh = new SSHClient(defaultConfig);
-		
-		ssh.addHostKeyVerifier(new PromiscuousVerifier());
-
-		ssh.connect(ip, SSH_PORT);
-		
-		if (key != null) {
-			if (!key.endsWith(".pem"))
-				key += ".pem";
-			Path p = Configuration.getPathToFile(key);
-			if (p != null)
-				ssh.authPublickey(user, p.toString());
-		} else {	
-			ssh.authPassword(user, password);
-		}
-		
-		ssh.getConnection().getKeepAlive().setKeepAliveInterval(5);
-		
-		return ssh;
-	}
-
 	public static List<String> exec(String ip, String user, String password, String key, String command)
 			throws Exception {
-		final List<String> res = new ArrayList<String>();
+		List<String> res;
 		
-		logger.trace("Executing `{}` on {}...", command, ip);
-
-		final SSHClient ssh = getConnectedClient(ip, user, password, key);
+		long init = System.currentTimeMillis();
 		
-		try {
-			final Session session = ssh.startSession();
-			session.allocateDefaultPTY();
-			
-			try {
-				final Command cmd = session.exec(command);
-
-				Thread in = new Thread() {
-					public void run() {
-						try (Scanner sc = new Scanner(cmd.getInputStream())) {
-							while (sc.hasNextLine()) {
-								String line = sc.nextLine();
-								logger.trace(line);
-								res.add(line);
-							}
-						}
-					}
-				};
-				in.start();
-				
-				Thread err = new Thread() {
-					public void run() {
-						try (Scanner sc = new Scanner(cmd.getErrorStream())) {
-							while (sc.hasNextLine()) {
-								String line = sc.nextLine();
-								logger.trace(line);
-								res.add(line);
-							}
-						}
-					}
-				};
-				err.start();
-
-				cmd.join();
-				in.join();
-				err.join();
-				
-				logger.trace("Done! Exit status: {}", cmd.getExitStatus());
-			} finally {
-				session.close();
-			}
-		} finally {
-			ssh.disconnect();
-			ssh.close();
+		switch (usedImplementation.getName()) {
+		case Sshj.NAME:
+			res = Sshj.exec(ip, user, password, key, command);
+			break;
+		case Jsch.NAME:
+			res = Jsch.exec(ip, user, password, key, command);
+			break;
+		default:
+			throw new RuntimeException("Implementation not handled.");	
 		}
 
+		long duration = System.currentTimeMillis() - init;
+		logger.trace("Executed `{}` on {} in {}", command, ip, durationToString(duration));
 		return res;
 	}
 
@@ -162,27 +91,21 @@ public class Ssh {
 
 	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile)
 			throws Exception {
-		logger.trace("Receiving file `{}` on {}...", rfile, ip);
-
-		final SSHClient ssh = getConnectedClient(ip, user, password, key);
+		long init = System.currentTimeMillis();
 		
-		try {
-			final Session session = ssh.startSession();
-			try {
-				ssh.newSCPFileTransfer().download(rfile, new FileSystemFile(lfile));
-				
-				logger.trace("Done!");
-			} catch (SCPException e) {
-				if (e.getMessage().contains("No such file or directory"))
-					logger.warn("No file or directory `{}` found on {}.", rfile, ip);
-				else throw e;
-			} finally {
-				session.close();
-			}
-		} finally {
-			ssh.disconnect();
-			ssh.close();
+		switch (usedImplementation.getName()) {
+		case Sshj.NAME:
+			Sshj.receiveFile(ip, user, password, key, lfile, rfile);
+			break;
+		case Jsch.NAME:
+			Jsch.receiveFile(ip, user, password, key, lfile, rfile);
+			break;
+		default:
+			throw new RuntimeException("Implementation not handled.");
 		}
+		
+		long duration = System.currentTimeMillis() - init;
+		logger.trace("File `{}` received from {} in {}", rfile, ip, durationToString(duration));
 	}
 
 	public static void sendFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
@@ -196,36 +119,71 @@ public class Ssh {
 
 	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile)
 			throws Exception {
-		logger.trace("Sending file `{}` on {}...", lfile, ip);
+		long init = System.currentTimeMillis();
 
-		final SSHClient ssh = getConnectedClient(ip, user, password, key);
-		
-		try {
-			final Session session = ssh.startSession();
-			try {
-				ssh.newSCPFileTransfer().upload(new FileSystemFile(lfile), rfile);
-				
-				logger.trace("Done!");
-			} finally {
-				session.close();
-			}
-		} finally {
-			ssh.disconnect();
-			ssh.close();
+		switch (usedImplementation.getName()) {
+		case Sshj.NAME:
+			Sshj.sendFile(ip, user, password, key, lfile, rfile);
+			break;
+		case Jsch.NAME:
+			Jsch.sendFile(ip, user, password, key, lfile, rfile);
+			break;
+		default:
+			throw new RuntimeException("Implementation not handled.");	
 		}
+		
+		long duration = System.currentTimeMillis() - init;
+		logger.trace("File `{}` sent to {} in {}", lfile, ip, durationToString(duration));
 	}
 	
+	public static String durationToString(long duration) {
+		String actualDuration = "";
+		{
+			int res = (int) TimeUnit.MILLISECONDS.toSeconds(duration);
+			if (res > 60 * 60) {
+				actualDuration += (res / (60 * 60)) + " h ";
+				res = res % (60 * 60);
+			}
+			if (res > 60) {
+				actualDuration += (res / 60) + " m ";
+				res = res % 60;
+			}
+			actualDuration += res + " s";
+		}
+
+
+		return actualDuration;
+	}
+	
+	private static Class<? extends Ssh> usedImplementation = Sshj.class;
+	
+	public static void setImplementation(Class<? extends Ssh> usedImplementation) {
+		if (!usedImplementation.getName().equals(Sshj.NAME) && !usedImplementation.getName().equals(Jsch.NAME))
+			throw new RuntimeException("Implementation not handled.");
+		
+		Ssh.usedImplementation = usedImplementation;
+		logger.trace("Using {} as the SSH implementation now...", usedImplementation.getName());
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static void main(String[] args) throws Exception {
-		String cmd1 = "bash test.sh";
-		String cmd2 = "bash test2.sh";
+		String[] cmds = new String[] {
+			"bash test.sh",
+			"bash test2.sh"
+		};
 		
-		System.out.println("======= Ssh =======");
-		Ssh.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd1);
-		Ssh.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd2);
+		Class[] imps = new Class[] {
+			Sshj.class, Jsch.class
+		};
 		
-		System.out.println("======= SshOld =======");
-		SshOld.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd1);
-		SshOld.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd2);
+		for (Class imp : imps) {
+			Ssh.setImplementation(imp);
+			for (String cmd : cmds) {
+				Ssh.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd);
+				Thread.sleep(5000);
+			}
+			logger.trace("============");
+		}
 	}
 	
 }

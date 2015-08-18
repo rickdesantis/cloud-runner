@@ -1,8 +1,4 @@
-package it.cloud.utils;
-
-import it.cloud.Configuration;
-import it.cloud.Instance;
-import it.cloud.VirtualMachine;
+package it.cloud.utils.ssh;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -15,31 +11,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 
-@Deprecated
-public class SshOld {
+import it.cloud.utils.Ssh;
+
+public class Jsch extends Ssh {
 	
-	private static final Logger logger = LoggerFactory.getLogger(SshOld.class);
-	
-	public static List<String> exec(String ip, VirtualMachine vm, String command) throws Exception {
-		return exec(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"), Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), command);
-	}
-	
-	public static List<String> exec(Instance inst, String command) throws Exception {
-		return exec(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
-	}
+	public static final String NAME = "it.cloud.utils.ssh.Jsch";
 
 	@Deprecated
 	public static List<String> execWithoutEnvironment(String ip, String user, String password, String key, String command) throws Exception {
-		List<String> res = new ArrayList<String>();
+		final List<String> res = new ArrayList<String>();
 		
 		// creating session with username, server's address and port (22 by
 		// default)
@@ -56,38 +42,49 @@ public class SshOld {
 		session.connect();
 
 		// creating channel in execution mod
-		Channel channel = session.openChannel("exec");
+		final Channel channel = session.openChannel("exec");
 		// sending command which runs bash-script in UploadPath directory
 		((ChannelExec) channel).setCommand(command);
 		// taking input stream
 		channel.setInputStream(null);
-		((ChannelExec) channel).setErrStream(System.err);
-		InputStream in = channel.getInputStream();
 		// connecting channel
 		channel.connect();
-		// read buffer
-		byte[] tmp = new byte[1024];
-
-		// reading channel while server responses smth or until it does not
-		// close connection
-		while (true) {
-			while (in.available() > 0) {
-				int i = in.read(tmp, 0, 1024);
-				if (i < 0)
-					break;
-				String line = new String(tmp, 0, i);
-				logger.trace(line);
-				res.add(line);
+		
+		Thread in = new Thread() {
+			public void run() {
+				try (Scanner sc = new Scanner(channel.getInputStream())) {
+					while (sc.hasNextLine()) {
+						String line = sc.nextLine();
+						logger.trace(line);
+						res.add(line);
+					}
+				} catch (Exception e) {
+					logger.error("Error while considering the input stream.", e);
+				}
 			}
-			if (channel.isClosed()) {
-				res.add("exit-status: " + channel.getExitStatus());
-				break;
+		};
+		in.start();
+		
+		Thread err = new Thread() {
+			public void run() {
+				try (Scanner sc = new Scanner(((ChannelExec) channel).getErrStream())) {
+					while (sc.hasNextLine()) {
+						String line = sc.nextLine();
+						logger.trace(line);
+						res.add(line);
+					}
+				} catch (Exception e) {
+					logger.error("Error while considering the error stream.", e);
+				}
 			}
-			try {
-				Thread.sleep(1000);
-			} catch (Exception ee) {
-			}
-		}
+		};
+		err.start();
+		
+		in.join();
+		err.join();
+		if (channel.isClosed())
+			res.add("exit-status: " + channel.getExitStatus());
+		
 		// closing connection
 		channel.disconnect();
 		session.disconnect();
@@ -160,42 +157,6 @@ public class SshOld {
 		session.disconnect();
 
 		return res;
-	}
-	
-	public static Thread execInBackground(String ip, VirtualMachine vm, String command) throws Exception {
-		return execInBackground(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"), Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), command);
-	}
-	
-	public static Thread execInBackground(Instance inst, String command) throws Exception {
-		return execInBackground(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
-	}
-
-	public static Thread execInBackground(String ip, String user, String password, String key, String command) throws Exception {
-		final String fip = ip;
-		final String fuser = user;
-		final String fpassword = password;
-		final String fkey = key;
-		final String fcommand = command;
-		
-		Thread t = new Thread() {
-			public void run() {
-				try {
-					exec(fip, fuser, fpassword, fkey, fcommand);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		};
-		t.start();
-		return t;
-	}
-	
-	public static void receiveFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
-		receiveFile(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"), Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), lfile, rfile);
-	}
-	
-	public static void receiveFile(Instance inst, String lfile, String rfile) throws Exception {
-		receiveFile(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), lfile, rfile);
 	}
 	
 	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile) throws Exception {
@@ -302,14 +263,6 @@ public class SshOld {
 			} catch (Exception ee) {
 			}
 		}
-	}
-	
-	public static void sendFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
-		sendFile(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"), Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), lfile, rfile);
-	}
-	
-	public static void sendFile(Instance inst, String lfile, String rfile) throws Exception {
-		sendFile(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), lfile, rfile);
 	}
 	
 	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile) throws Exception {
