@@ -1,7 +1,6 @@
 package it.cloud.utils;
 
 import java.nio.file.Path;
-import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -12,10 +11,12 @@ import org.slf4j.LoggerFactory;
 import it.cloud.Configuration;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
+import net.schmizz.keepalive.KeepAliveProvider;
+import net.schmizz.sshj.DefaultConfig;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.connection.channel.direct.Session.Command;
-import net.schmizz.sshj.transport.verification.HostKeyVerifier;
+import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.xfer.FileSystemFile;
 import net.schmizz.sshj.xfer.scp.SCPException;
 
@@ -37,15 +38,13 @@ public class Ssh {
 	private static SSHClient getConnectedClient(String ip, String user, String password, String key) throws Exception {
 		if (password == null && key == null)
 			throw new Exception("You need to provide one among the key and the password to be used.");
-
-		final SSHClient ssh = new SSHClient();
 		
-		ssh.addHostKeyVerifier(new HostKeyVerifier() {
-			@Override
-			public boolean verify(String hostname, int port, PublicKey key) {
-				return true;
-			}
-		});
+		DefaultConfig defaultConfig = new DefaultConfig();
+        defaultConfig.setKeepAliveProvider(KeepAliveProvider.KEEP_ALIVE);
+
+		final SSHClient ssh = new SSHClient(defaultConfig);
+		
+		ssh.addHostKeyVerifier(new PromiscuousVerifier());
 
 		ssh.connect(ip, SSH_PORT);
 		
@@ -58,6 +57,8 @@ public class Ssh {
 		} else {	
 			ssh.authPassword(user, password);
 		}
+		
+		ssh.getConnection().getKeepAlive().setKeepAliveInterval(5);
 		
 		return ssh;
 	}
@@ -72,6 +73,8 @@ public class Ssh {
 		
 		try {
 			final Session session = ssh.startSession();
+			session.allocateDefaultPTY();
+			
 			try {
 				final Command cmd = session.exec(command);
 
@@ -210,6 +213,19 @@ public class Ssh {
 			ssh.disconnect();
 			ssh.close();
 		}
+	}
+	
+	public static void main(String[] args) throws Exception {
+		String cmd1 = "bash test.sh";
+		String cmd2 = "bash test2.sh";
+		
+		System.out.println("======= Ssh =======");
+		Ssh.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd1);
+		Ssh.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd2);
+		
+		System.out.println("======= SshOld =======");
+		SshOld.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd1);
+		SshOld.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd2);
 	}
 	
 }
