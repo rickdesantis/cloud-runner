@@ -1,24 +1,40 @@
 package it.cloud.utils.ssh;
 
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 import it.cloud.Configuration;
+import it.cloud.Instance;
+import it.cloud.VirtualMachine;
 import it.cloud.utils.Ssh;
 import net.schmizz.keepalive.KeepAliveProvider;
 import net.schmizz.sshj.DefaultConfig;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.connection.channel.direct.Session.Command;
+import net.schmizz.sshj.connection.channel.direct.Session.Shell;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.xfer.FileSystemFile;
 import net.schmizz.sshj.xfer.scp.SCPException;
 
 public class Sshj extends Ssh {
 	
-	public static final String NAME = "it.cloud.utils.ssh.Sshj"; 
+	public static final String NAME = "it.cloud.utils.ssh.Sshj";
+	
+	public Sshj(String ip, String user, String password, String key) {
+		super(ip, user, password, key);
+	}
+	
+	public Sshj(String ip, VirtualMachine vm) {
+		super(ip, vm);
+	}
+	
+	public Sshj(Instance inst) {
+		super(inst);
+	}
 	
 	private static SSHClient getConnectedClient(String ip, String user, String password, String key) throws Exception {
 		if (password == null && key == null)
@@ -48,7 +64,8 @@ public class Sshj extends Ssh {
 		return ssh;
 	}
 
-	public static List<String> exec(String ip, String user, String password, String key, String command)
+	@Deprecated
+	public static List<String> execWithoutEnvironment(String ip, String user, String password, String key, String command)
 			throws Exception {
 		final List<String> res = new ArrayList<String>();
 		
@@ -92,6 +109,85 @@ public class Sshj extends Ssh {
 				err.join();
 				
 				res.add("exit-status: " + cmd.getExitStatus());
+			} finally {
+				session.close();
+			}
+		} finally {
+			ssh.disconnect();
+			ssh.close();
+		}
+
+		return res;
+	}
+	
+	public static final String FINISHED_FLAG = "echo TERMINATO_TUTTO_TUTTO";
+	
+	public static List<String> exec(String ip, String user, String password, String key, String command)
+			throws Exception {
+		final List<String> res = new ArrayList<String>();
+		
+		final SSHClient ssh = getConnectedClient(ip, user, password, key);
+		
+		try {
+			final Session session = ssh.startSession();
+			session.allocateDefaultPTY();
+			
+			try {
+				final Shell shell = session.startShell();
+				
+				
+				shell.changeWindowDimensions(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+				
+				PrintStream out = new PrintStream(shell.getOutputStream());
+				out.println(FINISHED_FLAG);
+				out.flush();
+				out.println(command);
+				out.flush();
+				out.println("exit");
+				out.flush();
+				
+				final String fcommand = command;
+				
+				Thread in = new Thread() {
+					public void run() {
+						try (Scanner sc = new Scanner(shell.getInputStream())) {
+							boolean considerLine = false;
+							String shell = "";
+							
+							while (sc.hasNextLine()) {
+								String line = sc.nextLine();
+								if (!considerLine && line.endsWith(FINISHED_FLAG)) {
+									shell = line.substring(0, line.indexOf(FINISHED_FLAG));
+								} else if (!considerLine && line.endsWith(fcommand)) {
+									considerLine = true;
+								} else if (considerLine && !line.contains(shell)) {
+									logger.trace(line);
+									res.add(line);
+								} else if (considerLine && line.contains(shell)) {
+									considerLine = false;
+								}
+							}
+						}
+					}
+				};
+				in.start();
+				
+				Thread err = new Thread() {
+					public void run() {
+						try (Scanner sc = new Scanner(shell.getErrorStream())) {
+							while (sc.hasNextLine()) {
+								String line = sc.nextLine();
+								logger.trace(line);
+								res.add(line);
+							}
+						}
+					}
+				};
+				err.start();
+
+				shell.join();
+				in.join();
+				err.join();
 			} finally {
 				session.close();
 			}

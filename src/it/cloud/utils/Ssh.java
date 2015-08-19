@@ -1,5 +1,6 @@
 package it.cloud.utils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -12,11 +13,47 @@ import it.cloud.VirtualMachine;
 import it.cloud.utils.ssh.Jsch;
 import it.cloud.utils.ssh.Sshj;
 
-public abstract class Ssh {
+public class Ssh {
 
 	protected static final Logger logger = LoggerFactory.getLogger(Ssh.class);
 
 	public static final int SSH_PORT = 22;
+	
+	private String ip;
+	private String user;
+	private String password;
+	private String key;
+	
+	public Ssh(String ip, String user, String password, String key) {
+		this.ip = ip;
+		this.user = user;
+		this.password = password;
+		this.key = key;
+	}
+	
+	public Ssh(String ip, VirtualMachine vm) {
+		this(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
+				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString());
+	}
+	
+	public Ssh(Instance inst) {
+		this(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString());
+	}
+	
+	public List<String> exec(String... commands) throws Exception {
+		List<String> res = new ArrayList<String>();
+		for (String command : commands)
+			res.addAll(exec(ip, user, password, key, command));
+		return res;
+	}
+	
+	public void receiveFile(String lfile, String rfile) throws Exception {
+		receiveFile(ip, user, password, key, lfile, rfile);
+	}
+	
+	public void sendFile(String lfile, String rfile) throws Exception {
+		sendFile(ip, user, password, key, lfile, rfile);
+	}
 
 	public static List<String> exec(String ip, VirtualMachine vm, String command) throws Exception {
 		return exec(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
@@ -168,22 +205,30 @@ public abstract class Ssh {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static void main(String[] args) throws Exception {
 		String[] cmds = new String[] {
-			"bash test.sh",
-			"bash test2.sh"
+			"echo \"test.sh: `bash test.sh`\" && echo \"test2.sh: `bash test2.sh`\""
+//			"bash /home/ubuntu/CloudMLDaemon -port 9000",
+//			"ps aux | grep loud",
+//			"sleep 180",
+//			"bash /home/ubuntu/CloudMLDaemon -port 9000 -stop",
+//			"ps aux | grep loud"
 		};
 		
 		Class[] imps = new Class[] {
-			Sshj.class, Jsch.class
+			Sshj.class //, Jsch.class
 		};
+		
+		Ssh ssh = new Ssh("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem");
+//		Ssh ssh = new Ssh("52.18.154.110", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/desantis-ireland.pem");
 		
 		for (Class imp : imps) {
 			Ssh.setImplementation(imp);
 			for (String cmd : cmds) {
-				Ssh.exec("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem", cmd);
+				ssh.exec(cmd);
 				Thread.sleep(5000);
 			}
 			logger.trace("============");
 		}
+		
 	}
 	
 }

@@ -17,11 +17,25 @@ import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 
+import it.cloud.Instance;
+import it.cloud.VirtualMachine;
 import it.cloud.utils.Ssh;
 
 public class Jsch extends Ssh {
 	
 	public static final String NAME = "it.cloud.utils.ssh.Jsch";
+	
+	public Jsch(String ip, String user, String password, String key) {
+		super(ip, user, password, key);
+	}
+	
+	public Jsch(String ip, VirtualMachine vm) {
+		super(ip, vm);
+	}
+	
+	public Jsch(Instance inst) {
+		super(inst);
+	}
 
 	@Deprecated
 	public static List<String> execWithoutEnvironment(String ip, String user, String password, String key, String command) throws Exception {
