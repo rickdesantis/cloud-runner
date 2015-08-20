@@ -82,7 +82,7 @@ public class Ssh {
 		}
 
 		long duration = System.currentTimeMillis() - init;
-		logger.trace("Executed `{}` on {} in {}", command, ip, Utilities.durationToString(duration));
+		logger.debug("Executed `{}` on {} in {}", command, ip, Utilities.durationToString(duration));
 		return res;
 	}
 
@@ -142,7 +142,7 @@ public class Ssh {
 		}
 		
 		long duration = System.currentTimeMillis() - init;
-		logger.trace("File `{}` received from {} in {}", rfile, ip, Utilities.durationToString(duration));
+		logger.debug("File `{}` received from {} in {}", rfile, ip, Utilities.durationToString(duration));
 	}
 
 	public static void sendFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
@@ -170,7 +170,7 @@ public class Ssh {
 		}
 		
 		long duration = System.currentTimeMillis() - init;
-		logger.trace("File `{}` sent to {} in {}", lfile, ip, Utilities.durationToString(duration));
+		logger.debug("File `{}` sent to {} in {}", lfile, ip, Utilities.durationToString(duration));
 	}
 	
 	private static Class<? extends Ssh> usedImplementation = Sshj.class;
@@ -180,7 +180,7 @@ public class Ssh {
 			throw new RuntimeException("Implementation not handled.");
 		
 		Ssh.usedImplementation = usedImplementation;
-		logger.trace("Using {} as the SSH implementation now...", usedImplementation.getName());
+		logger.debug("Using {} as the SSH implementation now...", usedImplementation.getName());
 	}
 	
 }

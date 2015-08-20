@@ -53,7 +53,7 @@ public class Local {
 		res.add(String.format("exit-status: %d", p.waitFor()));
 		
 		long duration = System.currentTimeMillis() - init;
-		logger.trace("Executed `{}` on {} in {}", command, "localhost", Utilities.durationToString(duration));
+		logger.debug("Executed `{}` on {} in {}", command, "localhost", Utilities.durationToString(duration));
 		return res;
 	}
 	
