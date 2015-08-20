@@ -50,7 +50,7 @@ public class Local {
 		in.join();
 		err.join();
 		
-		res.add("exit-status: " + p.waitFor());
+		res.add(String.format("exit-status: %d", p.waitFor()));
 		
 		long duration = System.currentTimeMillis() - init;
 		logger.trace("Executed `{}` on {} in {}", command, "localhost", Utilities.durationToString(duration));

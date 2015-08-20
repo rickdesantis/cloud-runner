@@ -12,6 +12,7 @@ import it.cloud.VirtualMachine;
 import it.cloud.utils.ssh.Jsch;
 import it.cloud.utils.ssh.Sshj;
 
+@SuppressWarnings("deprecation")
 public class Ssh {
 
 	protected static final Logger logger = LoggerFactory.getLogger(Ssh.class);
@@ -32,7 +33,7 @@ public class Ssh {
 	
 	public Ssh(String ip, VirtualMachine vm) {
 		this(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
-				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString());
+				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME").concat(".pem")).toString());
 	}
 	
 	public Ssh(Instance inst) {
@@ -56,7 +57,7 @@ public class Ssh {
 
 	public static List<String> exec(String ip, VirtualMachine vm, String command) throws Exception {
 		return exec(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
-				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), command);
+				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME").concat(".pem")).toString(), command);
 	}
 
 	public static List<String> exec(Instance inst, String command) throws Exception {
@@ -87,7 +88,7 @@ public class Ssh {
 
 	public static Thread execInBackground(String ip, VirtualMachine vm, String command) throws Exception {
 		return execInBackground(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
-				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), command);
+				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME").concat(".pem")).toString(), command);
 	}
 
 	public static Thread execInBackground(Instance inst, String command) throws Exception {
@@ -118,7 +119,7 @@ public class Ssh {
 
 	public static void receiveFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
 		receiveFile(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
-				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), lfile, rfile);
+				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME").concat(".pem")).toString(), lfile, rfile);
 	}
 
 	public static void receiveFile(Instance inst, String lfile, String rfile) throws Exception {
@@ -146,7 +147,7 @@ public class Ssh {
 
 	public static void sendFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
 		sendFile(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
-				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME") + ".pem").toString(), lfile, rfile);
+				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME").concat(".pem")).toString(), lfile, rfile);
 	}
 
 	public static void sendFile(Instance inst, String lfile, String rfile) throws Exception {

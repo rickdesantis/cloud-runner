@@ -21,6 +21,7 @@ import it.cloud.Instance;
 import it.cloud.VirtualMachine;
 import it.cloud.utils.Ssh;
 
+@Deprecated
 public class Jsch extends Ssh {
 	
 	public static final String NAME = "it.cloud.utils.ssh.Jsch";

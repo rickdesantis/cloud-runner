@@ -3,24 +3,26 @@ package it.cloud.utils;
 import java.util.concurrent.TimeUnit;
 
 public abstract class Utilities {
-
+	
 	public static String durationToString(long duration) {
-		String actualDuration = "";
+		StringBuilder sb = new StringBuilder();
 		{
 			int res = (int) TimeUnit.MILLISECONDS.toSeconds(duration);
 			if (res > 60 * 60) {
-				actualDuration += (res / (60 * 60)) + " h ";
+				sb.append(res / (60 * 60));
+				sb.append(" h ");
 				res = res % (60 * 60);
 			}
 			if (res > 60) {
-				actualDuration += (res / 60) + " m ";
+				sb.append(res / 60);
+				sb.append(" m ");
 				res = res % 60;
 			}
-			actualDuration += res + " s";
+			sb.append(res);
+			sb.append(" s");
 		}
 
-
-		return actualDuration;
+		return sb.toString();
 	}
 
 }

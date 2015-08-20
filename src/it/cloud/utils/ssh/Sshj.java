@@ -51,7 +51,7 @@ public class Sshj extends Ssh {
 		
 		if (key != null) {
 			if (!key.endsWith(".pem"))
-				key += ".pem";
+				key = key.concat(".pem");
 			Path p = Configuration.getPathToFile(key);
 			if (p != null)
 				ssh.authPublickey(user, p.toString());
@@ -108,7 +108,7 @@ public class Sshj extends Ssh {
 				in.join();
 				err.join();
 				
-				res.add("exit-status: " + cmd.getExitStatus());
+				res.add(String.format("exit-status: %d", cmd.getExitStatus()));
 			} finally {
 				session.close();
 			}
