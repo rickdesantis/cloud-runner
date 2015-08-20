@@ -2,7 +2,6 @@ package it.cloud.utils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,7 +81,7 @@ public class Ssh {
 		}
 
 		long duration = System.currentTimeMillis() - init;
-		logger.trace("Executed `{}` on {} in {}", command, ip, durationToString(duration));
+		logger.trace("Executed `{}` on {} in {}", command, ip, Utilities.durationToString(duration));
 		return res;
 	}
 
@@ -142,7 +141,7 @@ public class Ssh {
 		}
 		
 		long duration = System.currentTimeMillis() - init;
-		logger.trace("File `{}` received from {} in {}", rfile, ip, durationToString(duration));
+		logger.trace("File `{}` received from {} in {}", rfile, ip, Utilities.durationToString(duration));
 	}
 
 	public static void sendFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
@@ -170,26 +169,7 @@ public class Ssh {
 		}
 		
 		long duration = System.currentTimeMillis() - init;
-		logger.trace("File `{}` sent to {} in {}", lfile, ip, durationToString(duration));
-	}
-	
-	public static String durationToString(long duration) {
-		String actualDuration = "";
-		{
-			int res = (int) TimeUnit.MILLISECONDS.toSeconds(duration);
-			if (res > 60 * 60) {
-				actualDuration += (res / (60 * 60)) + " h ";
-				res = res % (60 * 60);
-			}
-			if (res > 60) {
-				actualDuration += (res / 60) + " m ";
-				res = res % 60;
-			}
-			actualDuration += res + " s";
-		}
-
-
-		return actualDuration;
+		logger.trace("File `{}` sent to {} in {}", lfile, ip, Utilities.durationToString(duration));
 	}
 	
 	private static Class<? extends Ssh> usedImplementation = Sshj.class;
@@ -200,35 +180,6 @@ public class Ssh {
 		
 		Ssh.usedImplementation = usedImplementation;
 		logger.trace("Using {} as the SSH implementation now...", usedImplementation.getName());
-	}
-	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static void main(String[] args) throws Exception {
-		String[] cmds = new String[] {
-			"echo \"test.sh: `bash test.sh`\" && echo \"test2.sh: `bash test2.sh`\""
-//			"bash /home/ubuntu/CloudMLDaemon -port 9000",
-//			"ps aux | grep loud",
-//			"sleep 180",
-//			"bash /home/ubuntu/CloudMLDaemon -port 9000 -stop",
-//			"ps aux | grep loud"
-		};
-		
-		Class[] imps = new Class[] {
-			Sshj.class //, Jsch.class
-		};
-		
-		Ssh ssh = new Ssh("109.231.126.56", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/polimi-review-2014.pem");
-//		Ssh ssh = new Ssh("52.18.154.110", "ubuntu", "ubuntu", "/Users/ft/Documents/keys/desantis-ireland.pem");
-		
-		for (Class imp : imps) {
-			Ssh.setImplementation(imp);
-			for (String cmd : cmds) {
-				ssh.exec(cmd);
-				Thread.sleep(5000);
-			}
-			logger.trace("============");
-		}
-		
 	}
 	
 }
