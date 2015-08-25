@@ -121,11 +121,6 @@ public class Sshj extends Ssh {
 
 	public static final String FINISHED_FLAG = "echo TERMINATO_TUTTO_TUTTO";
 
-	public static List<String> exec(String ip, String user, String password, String key, String command)
-			throws Exception {
-		return new Sshj(ip, user, password, key).exec(command);
-	}
-
 	public List<String> exec(String command) throws Exception {
 		final List<String> res = new ArrayList<String>();
 
@@ -202,11 +197,6 @@ public class Sshj extends Ssh {
 		return res;
 	}
 
-	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile)
-			throws Exception {
-		new Sshj(ip, user, password, key).receiveFile(lfile, rfile);
-	}
-
 	public void receiveFile(String lfile, String rfile) throws Exception {
 		final SSHClient ssh = getConnectedClient();
 
@@ -228,11 +218,6 @@ public class Sshj extends Ssh {
 		}
 	}
 
-	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile)
-			throws Exception {
-		new Sshj(ip, user, password, key).sendFile(lfile, rfile);
-	}
-
 	public void sendFile(String lfile, String rfile) throws Exception {
 		final SSHClient ssh = getConnectedClient();
 
@@ -247,10 +232,5 @@ public class Sshj extends Ssh {
 			ssh.disconnect();
 			ssh.close();
 		}
-	}
-	
-	public static Thread execInBackground(String ip, String user, String password, String key, String command)
-			throws Exception {
-		return new Sshj(ip, user, password, key).execInBackground(command);
 	}
 }

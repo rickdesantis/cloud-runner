@@ -35,25 +35,5 @@ public class FakeSsh extends Ssh {
 	public void sendFile(String lfile, String rfile) throws Exception {
 		logger.info("sendFile(`{}`, `{}`)", lfile, rfile);
 	}
-	
-	public static List<String> exec(String ip, String user, String password, String key, String command)
-			throws Exception {
-		return new FakeSsh(ip, user, password, key).exec(command);
-	}
-	
-	public static Thread execInBackground(String ip, String user, String password, String key, String command)
-			throws Exception {
-		return new FakeSsh(ip, user, password, key).execInBackground(command);
-	}
-	
-	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile)
-			throws Exception {
-		new FakeSsh(ip, user, password, key).receiveFile(lfile, rfile);
-	}
-	
-	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile)
-			throws Exception {
-		new FakeSsh(ip, user, password, key).sendFile(lfile, rfile);
-	}
 
 }

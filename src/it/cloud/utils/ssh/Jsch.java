@@ -109,11 +109,6 @@ public class Jsch extends Ssh {
 
 	public static final String FINISHED_FLAG = "TERMINATO_TUTTO_TUTTO";
 
-	public static List<String> exec(String ip, String user, String password, String key, String command)
-			throws Exception {
-		return new Jsch(ip, user, password, key).exec(command);
-	}
-
 	public List<String> exec(String command) throws Exception {
 		List<String> res = new ArrayList<String>();
 
@@ -178,11 +173,6 @@ public class Jsch extends Ssh {
 		session.disconnect();
 
 		return res;
-	}
-
-	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile)
-			throws Exception {
-		new Jsch(ip, user, password, key).receiveFile(lfile, rfile);
 	}
 
 	public void receiveFile(String lfile, String rfile) throws Exception {
@@ -288,11 +278,6 @@ public class Jsch extends Ssh {
 			} catch (Exception ee) {
 			}
 		}
-	}
-
-	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile)
-			throws Exception {
-		new Jsch(ip, user, password, key).sendFile(lfile, rfile);
 	}
 
 	public void sendFile(String lfile, String rfile) throws Exception {
@@ -408,9 +393,5 @@ public class Jsch extends Ssh {
 		}
 		return b;
 	}
-
-	public static Thread execInBackground(String ip, String user, String password, String key, String command)
-			throws Exception {
-		return new Jsch(ip, user, password, key).execInBackground(command);
-	}
+	
 }
