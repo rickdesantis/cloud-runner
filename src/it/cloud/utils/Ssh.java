@@ -1,6 +1,7 @@
 package it.cloud.utils;
 
-import java.util.ArrayList;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -9,51 +10,40 @@ import org.slf4j.LoggerFactory;
 import it.cloud.Configuration;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
-import it.cloud.utils.ssh.Jsch;
 import it.cloud.utils.ssh.Sshj;
 
-@SuppressWarnings("deprecation")
-public class Ssh {
+public abstract class Ssh {
 
 	protected static final Logger logger = LoggerFactory.getLogger(Ssh.class);
 
 	public static final int SSH_PORT = 22;
-	
-	private String ip;
-	private String user;
-	private String password;
-	private String key;
-	
+
+	protected String ip;
+	protected String user;
+	protected String password;
+	protected String key;
+
 	public Ssh(String ip, String user, String password, String key) {
 		this.ip = ip;
 		this.user = user;
 		this.password = password;
 		this.key = key;
 	}
-	
+
 	public Ssh(String ip, VirtualMachine vm) {
 		this(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
 				Configuration.getPathToFile(vm.getParameter("KEYPAIR_NAME").concat(".pem")).toString());
 	}
-	
+
 	public Ssh(Instance inst) {
 		this(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString());
 	}
-	
-	public List<String> exec(String... commands) throws Exception {
-		List<String> res = new ArrayList<String>();
-		for (String command : commands)
-			res.addAll(exec(ip, user, password, key, command));
-		return res;
-	}
-	
-	public void receiveFile(String lfile, String rfile) throws Exception {
-		receiveFile(ip, user, password, key, lfile, rfile);
-	}
-	
-	public void sendFile(String lfile, String rfile) throws Exception {
-		sendFile(ip, user, password, key, lfile, rfile);
-	}
+
+	public abstract List<String> exec(String command) throws Exception;
+
+	public abstract void receiveFile(String lfile, String rfile) throws Exception;
+
+	public abstract void sendFile(String lfile, String rfile) throws Exception;
 
 	public static List<String> exec(String ip, VirtualMachine vm, String command) throws Exception {
 		return exec(ip, vm.getParameter("SSH_USER"), vm.getParameter("SSH_PASS"),
@@ -63,23 +53,18 @@ public class Ssh {
 	public static List<String> exec(Instance inst, String command) throws Exception {
 		return exec(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
 	}
-	
+
+	@SuppressWarnings("unchecked")
 	public static List<String> exec(String ip, String user, String password, String key, String command)
 			throws Exception {
 		List<String> res;
-		
+
 		long init = System.currentTimeMillis();
 		
-		switch (usedImplementation.getName()) {
-		case Sshj.NAME:
-			res = Sshj.exec(ip, user, password, key, command);
-			break;
-		case Jsch.NAME:
-			res = Jsch.exec(ip, user, password, key, command);
-			break;
-		default:
-			throw new RuntimeException("Implementation not handled.");	
-		}
+		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
+		Ssh instance = c.newInstance(ip, user, password, key);
+		Method m = usedImplementation.getDeclaredMethod("exec", String.class);
+		res = (List<String>) m.invoke(instance, command);
 
 		long duration = System.currentTimeMillis() - init;
 		logger.debug("Executed `{}` on {} in {}", command, ip, Utilities.durationToString(duration));
@@ -98,16 +83,19 @@ public class Ssh {
 
 	public static Thread execInBackground(String ip, String user, String password, String key, String command)
 			throws Exception {
-		final String fip = ip;
-		final String fuser = user;
-		final String fpassword = password;
-		final String fkey = key;
+		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
+		Ssh instance = c.newInstance(ip, user, password, key);
+		Method m = usedImplementation.getDeclaredMethod("execInBackground", String.class);
+		return (Thread) m.invoke(instance, command);
+	}
+
+	public Thread execInBackground(String command) throws Exception {
 		final String fcommand = command;
 
 		Thread t = new Thread() {
 			public void run() {
 				try {
-					exec(fip, fuser, fpassword, fkey, fcommand);
+					exec(fcommand);
 				} catch (Exception e) {
 					logger.error("Error while executing the command.", e);
 				}
@@ -130,17 +118,11 @@ public class Ssh {
 			throws Exception {
 		long init = System.currentTimeMillis();
 		
-		switch (usedImplementation.getName()) {
-		case Sshj.NAME:
-			Sshj.receiveFile(ip, user, password, key, lfile, rfile);
-			break;
-		case Jsch.NAME:
-			Jsch.receiveFile(ip, user, password, key, lfile, rfile);
-			break;
-		default:
-			throw new RuntimeException("Implementation not handled.");
-		}
-		
+		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
+		Ssh instance = c.newInstance(ip, user, password, key);
+		Method m = usedImplementation.getDeclaredMethod("receiveFile", String.class, String.class);
+		m.invoke(instance, lfile, rfile);
+
 		long duration = System.currentTimeMillis() - init;
 		logger.debug("File `{}` received from {} in {}", rfile, ip, Utilities.durationToString(duration));
 	}
@@ -158,29 +140,20 @@ public class Ssh {
 			throws Exception {
 		long init = System.currentTimeMillis();
 
-		switch (usedImplementation.getName()) {
-		case Sshj.NAME:
-			Sshj.sendFile(ip, user, password, key, lfile, rfile);
-			break;
-		case Jsch.NAME:
-			Jsch.sendFile(ip, user, password, key, lfile, rfile);
-			break;
-		default:
-			throw new RuntimeException("Implementation not handled.");	
-		}
-		
+		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
+		Ssh instance = c.newInstance(ip, user, password, key);
+		Method m = usedImplementation.getDeclaredMethod("sendFile", String.class, String.class);
+		m.invoke(instance, lfile, rfile);
+
 		long duration = System.currentTimeMillis() - init;
 		logger.debug("File `{}` sent to {} in {}", lfile, ip, Utilities.durationToString(duration));
 	}
-	
-	private static Class<? extends Ssh> usedImplementation = Sshj.class;
-	
+
+	protected static Class<? extends Ssh> usedImplementation = Sshj.class;
+
 	public static void setImplementation(Class<? extends Ssh> usedImplementation) {
-		if (!usedImplementation.getName().equals(Sshj.NAME) && !usedImplementation.getName().equals(Jsch.NAME))
-			throw new RuntimeException("Implementation not handled.");
-		
 		Ssh.usedImplementation = usedImplementation;
 		logger.debug("Using {} as the SSH implementation now...", usedImplementation.getName());
 	}
-	
+
 }

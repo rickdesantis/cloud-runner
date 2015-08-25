@@ -23,31 +23,31 @@ import it.cloud.utils.Ssh;
 
 @Deprecated
 public class Jsch extends Ssh {
-	
+
 	public static final String NAME = "it.cloud.utils.ssh.Jsch";
-	
+
 	public Jsch(String ip, String user, String password, String key) {
 		super(ip, user, password, key);
 	}
-	
+
 	public Jsch(String ip, VirtualMachine vm) {
 		super(ip, vm);
 	}
-	
+
 	public Jsch(Instance inst) {
 		super(inst);
 	}
 
 	@Deprecated
-	public static List<String> execWithoutEnvironment(String ip, String user, String password, String key, String command) throws Exception {
+	public List<String> execWithoutEnvironment(String command) throws Exception {
 		final List<String> res = new ArrayList<String>();
-		
+
 		// creating session with username, server's address and port (22 by
 		// default)
 		JSch jsch = new JSch();
-		
+
 		jsch.addIdentity(key);
-		
+
 		Session session = jsch.getSession(user, ip, 22);
 		session.setPassword(password);
 
@@ -64,7 +64,7 @@ public class Jsch extends Ssh {
 		channel.setInputStream(null);
 		// connecting channel
 		channel.connect();
-		
+
 		Thread in = new Thread() {
 			public void run() {
 				try (Scanner sc = new Scanner(channel.getInputStream())) {
@@ -79,7 +79,7 @@ public class Jsch extends Ssh {
 			}
 		};
 		in.start();
-		
+
 		Thread err = new Thread() {
 			public void run() {
 				try (Scanner sc = new Scanner(((ChannelExec) channel).getErrStream())) {
@@ -94,30 +94,35 @@ public class Jsch extends Ssh {
 			}
 		};
 		err.start();
-		
+
 		in.join();
 		err.join();
 		if (channel.isClosed())
 			res.add("exit-status: " + channel.getExitStatus());
-		
+
 		// closing connection
 		channel.disconnect();
 		session.disconnect();
 
 		return res;
 	}
-	
+
 	public static final String FINISHED_FLAG = "TERMINATO_TUTTO_TUTTO";
-	
-	public static List<String> exec(String ip, String user, String password, String key, String command) throws Exception {
+
+	public static List<String> exec(String ip, String user, String password, String key, String command)
+			throws Exception {
+		return new Jsch(ip, user, password, key).exec(command);
+	}
+
+	public List<String> exec(String command) throws Exception {
 		List<String> res = new ArrayList<String>();
-		
+
 		// creating session with username, server's address and port (22 by
 		// default)
 		JSch jsch = new JSch();
-		
+
 		jsch.addIdentity(key);
-		
+
 		Session session = jsch.getSession(user, ip, 22);
 		session.setPassword(password);
 
@@ -127,35 +132,36 @@ public class Jsch extends Ssh {
 		session.connect();
 
 		// creating channel in shell mode
-		ChannelShell channel = (ChannelShell)session.openChannel("shell");
+		ChannelShell channel = (ChannelShell) session.openChannel("shell");
 		// connecting channel
 		channel.connect();
-		
+
 		channel.setPtySize(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
-		
-		try (
-				PrintStream out = new PrintStream(channel.getOutputStream());
-				Scanner in = new Scanner(channel.getInputStream())
-				) {
+
+		try (PrintStream out = new PrintStream(channel.getOutputStream());
+				Scanner in = new Scanner(channel.getInputStream())) {
 			out.println("echo " + FINISHED_FLAG);
 			out.flush();
-			
+
 			while (in.hasNextLine()) {
 				String line = in.nextLine();
 				if (line.equals(FINISHED_FLAG))
 					break;
 			}
-			
+
 			out.println(command);
 			out.flush();
-			
+
 			in.nextLine();
-			
-			try { Thread.sleep(100); } catch (Exception e) { }
-			
+
+			try {
+				Thread.sleep(100);
+			} catch (Exception e) {
+			}
+
 			out.println("echo " + FINISHED_FLAG);
 			out.flush();
-			
+
 			while (in.hasNextLine()) {
 				String line = in.nextLine();
 				if (line.equals(FINISHED_FLAG))
@@ -166,23 +172,28 @@ public class Jsch extends Ssh {
 				res.add(line);
 			}
 		}
-		
+
 		// closing connection
 		channel.disconnect();
 		session.disconnect();
 
 		return res;
 	}
-	
-	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile) throws Exception {
+
+	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile)
+			throws Exception {
+		new Jsch(ip, user, password, key).receiveFile(lfile, rfile);
+	}
+
+	public void receiveFile(String lfile, String rfile) throws Exception {
 		FileOutputStream fos = null;
 		try {
 			// creating session with username, server's address and port (22 by
 			// default)
 			JSch jsch = new JSch();
-			
+
 			jsch.addIdentity(key);
-			
+
 			Session session = jsch.getSession(user, ip, 22);
 			session.setPassword(password);
 
@@ -190,7 +201,7 @@ public class Jsch extends Ssh {
 			if (new File(lfile).isDirectory()) {
 				prefix = lfile + File.separator;
 			}
-//			session.setUserInfo(ui);
+			// session.setUserInfo(ui);
 			// disabling of certificate checks
 			session.setConfig("StrictHostKeyChecking", "no");
 			session.connect();
@@ -240,8 +251,7 @@ public class Jsch extends Ssh {
 				buf[0] = 0;
 				out.write(buf, 0, 1);
 				out.flush();
-				fos = new FileOutputStream(prefix == null ? lfile : prefix
-						+ file);
+				fos = new FileOutputStream(prefix == null ? lfile : prefix + file);
 				int foo;
 				while (true) {
 					if (buf.length < filesize)
@@ -279,16 +289,21 @@ public class Jsch extends Ssh {
 			}
 		}
 	}
-	
-	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile) throws Exception {
+
+	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile)
+			throws Exception {
+		new Jsch(ip, user, password, key).sendFile(lfile, rfile);
+	}
+
+	public void sendFile(String lfile, String rfile) throws Exception {
 		FileInputStream fis = null;
 		try {
 			// creating session with username, server's address and port (22 by
 			// default)
 			JSch jsch = new JSch();
-			
+
 			jsch.addIdentity(key);
-			
+
 			Session session = jsch.getSession(user, ip, 22);
 			session.setPassword(password);
 
@@ -312,7 +327,7 @@ public class Jsch extends Ssh {
 				System.exit(0);
 			}
 
-			File _lfile = new File(lfile); 
+			File _lfile = new File(lfile);
 
 			if (ptimestamp) {
 				command = "T" + (_lfile.lastModified() / 1000) + " 0";
@@ -369,7 +384,7 @@ public class Jsch extends Ssh {
 			}
 		}
 	}
-	
+
 	private static int checkAck(InputStream in) throws IOException {
 		int b = in.read();
 		if (b == 0)
@@ -394,4 +409,8 @@ public class Jsch extends Ssh {
 		return b;
 	}
 
+	public static Thread execInBackground(String ip, String user, String password, String key, String command)
+			throws Exception {
+		return new Jsch(ip, user, password, key).execInBackground(command);
+	}
 }

@@ -21,60 +21,59 @@ import net.schmizz.sshj.xfer.FileSystemFile;
 import net.schmizz.sshj.xfer.scp.SCPException;
 
 public class Sshj extends Ssh {
-	
+
 	public static final String NAME = "it.cloud.utils.ssh.Sshj";
-	
+
 	public Sshj(String ip, String user, String password, String key) {
 		super(ip, user, password, key);
 	}
-	
+
 	public Sshj(String ip, VirtualMachine vm) {
 		super(ip, vm);
 	}
-	
+
 	public Sshj(Instance inst) {
 		super(inst);
 	}
-	
-	private static SSHClient getConnectedClient(String ip, String user, String password, String key) throws Exception {
+
+	private SSHClient getConnectedClient() throws Exception {
 		if (password == null && key == null)
 			throw new Exception("You need to provide one among the key and the password to be used.");
-		
+
 		DefaultConfig defaultConfig = new DefaultConfig();
-        defaultConfig.setKeepAliveProvider(KeepAliveProvider.KEEP_ALIVE);
+		defaultConfig.setKeepAliveProvider(KeepAliveProvider.KEEP_ALIVE);
 
 		final SSHClient ssh = new SSHClient(defaultConfig);
-		
+
 		ssh.addHostKeyVerifier(new PromiscuousVerifier());
 
 		ssh.connect(ip, SSH_PORT);
-		
+
 		if (key != null) {
 			if (!key.endsWith(".pem"))
 				key = key.concat(".pem");
 			Path p = Configuration.getPathToFile(key);
 			if (p != null)
 				ssh.authPublickey(user, p.toString());
-		} else {	
+		} else {
 			ssh.authPassword(user, password);
 		}
-		
+
 		ssh.getConnection().getKeepAlive().setKeepAliveInterval(5);
-		
+
 		return ssh;
 	}
 
 	@Deprecated
-	public static List<String> execWithoutEnvironment(String ip, String user, String password, String key, String command)
-			throws Exception {
+	public List<String> execWithoutEnvironment(String command) throws Exception {
 		final List<String> res = new ArrayList<String>();
-		
-		final SSHClient ssh = getConnectedClient(ip, user, password, key);
-		
+
+		final SSHClient ssh = getConnectedClient();
+
 		try {
 			final Session session = ssh.startSession();
-//			session.allocateDefaultPTY();
-			
+			// session.allocateDefaultPTY();
+
 			try {
 				final Command cmd = session.exec(command);
 
@@ -90,7 +89,7 @@ public class Sshj extends Ssh {
 					}
 				};
 				in.start();
-				
+
 				Thread err = new Thread() {
 					public void run() {
 						try (Scanner sc = new Scanner(cmd.getErrorStream())) {
@@ -107,7 +106,7 @@ public class Sshj extends Ssh {
 				cmd.join();
 				in.join();
 				err.join();
-				
+
 				res.add(String.format("exit-status: %d", cmd.getExitStatus()));
 			} finally {
 				session.close();
@@ -119,25 +118,29 @@ public class Sshj extends Ssh {
 
 		return res;
 	}
-	
+
 	public static final String FINISHED_FLAG = "echo TERMINATO_TUTTO_TUTTO";
-	
+
 	public static List<String> exec(String ip, String user, String password, String key, String command)
 			throws Exception {
+		return new Sshj(ip, user, password, key).exec(command);
+	}
+
+	public List<String> exec(String command) throws Exception {
 		final List<String> res = new ArrayList<String>();
-		
-		final SSHClient ssh = getConnectedClient(ip, user, password, key);
-		
+
+		final SSHClient ssh = getConnectedClient();
+
 		try {
 			final Session session = ssh.startSession();
 			session.allocateDefaultPTY();
-			
+
 			try {
 				final Shell shell = session.startShell();
-				
-				
-				shell.changeWindowDimensions(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
-				
+
+				shell.changeWindowDimensions(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE,
+						Integer.MAX_VALUE);
+
 				PrintStream out = new PrintStream(shell.getOutputStream());
 				out.println(FINISHED_FLAG);
 				out.flush();
@@ -145,15 +148,15 @@ public class Sshj extends Ssh {
 				out.flush();
 				out.println("exit");
 				out.flush();
-				
+
 				final String fcommand = command;
-				
+
 				Thread in = new Thread() {
 					public void run() {
 						try (Scanner sc = new Scanner(shell.getInputStream())) {
 							boolean considerLine = false;
 							String shell = "";
-							
+
 							while (sc.hasNextLine()) {
 								String line = sc.nextLine();
 								if (!considerLine && line.endsWith(FINISHED_FLAG)) {
@@ -171,7 +174,7 @@ public class Sshj extends Ssh {
 					}
 				};
 				in.start();
-				
+
 				Thread err = new Thread() {
 					public void run() {
 						try (Scanner sc = new Scanner(shell.getErrorStream())) {
@@ -198,11 +201,15 @@ public class Sshj extends Ssh {
 
 		return res;
 	}
-	
+
 	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile)
 			throws Exception {
-		final SSHClient ssh = getConnectedClient(ip, user, password, key);
-		
+		new Sshj(ip, user, password, key).receiveFile(lfile, rfile);
+	}
+
+	public void receiveFile(String lfile, String rfile) throws Exception {
+		final SSHClient ssh = getConnectedClient();
+
 		try {
 			final Session session = ssh.startSession();
 			try {
@@ -210,7 +217,8 @@ public class Sshj extends Ssh {
 			} catch (SCPException e) {
 				if (e.getMessage().contains("No such file or directory"))
 					logger.warn("No file or directory `{}` found on {}.", rfile, ip);
-				else throw e;
+				else
+					throw e;
 			} finally {
 				session.close();
 			}
@@ -219,11 +227,15 @@ public class Sshj extends Ssh {
 			ssh.close();
 		}
 	}
-	
+
 	public static void sendFile(String ip, String user, String password, String key, String lfile, String rfile)
 			throws Exception {
-		final SSHClient ssh = getConnectedClient(ip, user, password, key);
-		
+		new Sshj(ip, user, password, key).sendFile(lfile, rfile);
+	}
+
+	public void sendFile(String lfile, String rfile) throws Exception {
+		final SSHClient ssh = getConnectedClient();
+
 		try {
 			final Session session = ssh.startSession();
 			try {
@@ -235,5 +247,10 @@ public class Sshj extends Ssh {
 			ssh.disconnect();
 			ssh.close();
 		}
+	}
+	
+	public static Thread execInBackground(String ip, String user, String password, String key, String command)
+			throws Exception {
+		return new Sshj(ip, user, password, key).execInBackground(command);
 	}
 }
