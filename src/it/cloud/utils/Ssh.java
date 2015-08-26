@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import it.cloud.Configuration;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
-import it.cloud.utils.ssh.Sshj;
+import it.cloud.utils.ssh.Jsch;
 
 public abstract class Ssh {
 
@@ -149,7 +149,7 @@ public abstract class Ssh {
 		logger.debug("File `{}` sent to {} in {}", lfile, ip, Utilities.durationToString(duration));
 	}
 
-	protected static Class<? extends Ssh> usedImplementation = Sshj.class;
+	protected static Class<? extends Ssh> usedImplementation = Jsch.class;
 
 	public static void setImplementation(Class<? extends Ssh> usedImplementation) {
 		Ssh.usedImplementation = usedImplementation;
