@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import it.cloud.Configuration;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
+import it.cloud.utils.ssh.FakeSsh;
 import it.cloud.utils.ssh.Jsch;
 
 public abstract class Ssh {
@@ -63,7 +64,7 @@ public abstract class Ssh {
 		
 		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
 		Ssh instance = c.newInstance(ip, user, password, key);
-		Method m = usedImplementation.getDeclaredMethod("exec", String.class);
+		Method m = usedImplementation.getMethod("exec", String.class);
 		res = (List<String>) m.invoke(instance, command);
 
 		long duration = System.currentTimeMillis() - init;
@@ -85,7 +86,7 @@ public abstract class Ssh {
 			throws Exception {
 		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
 		Ssh instance = c.newInstance(ip, user, password, key);
-		Method m = usedImplementation.getDeclaredMethod("execInBackground", String.class);
+		Method m = usedImplementation.getMethod("execInBackground", String.class);
 		return (Thread) m.invoke(instance, command);
 	}
 
@@ -120,7 +121,7 @@ public abstract class Ssh {
 		
 		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
 		Ssh instance = c.newInstance(ip, user, password, key);
-		Method m = usedImplementation.getDeclaredMethod("receiveFile", String.class, String.class);
+		Method m = usedImplementation.getMethod("receiveFile", String.class, String.class);
 		m.invoke(instance, lfile, rfile);
 
 		long duration = System.currentTimeMillis() - init;
@@ -142,7 +143,7 @@ public abstract class Ssh {
 
 		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
 		Ssh instance = c.newInstance(ip, user, password, key);
-		Method m = usedImplementation.getDeclaredMethod("sendFile", String.class, String.class);
+		Method m = usedImplementation.getMethod("sendFile", String.class, String.class);
 		m.invoke(instance, lfile, rfile);
 
 		long duration = System.currentTimeMillis() - init;
@@ -154,6 +155,12 @@ public abstract class Ssh {
 	public static void setImplementation(Class<? extends Ssh> usedImplementation) {
 		Ssh.usedImplementation = usedImplementation;
 		logger.debug("Using {} as the SSH implementation now...", usedImplementation.getName());
+	}
+	
+	public static void main(String[] args) throws Exception {
+		setImplementation(FakeSsh.class);
+		
+		Ssh.execInBackground("ip", "user", "password", "key", "command");
 	}
 
 }
