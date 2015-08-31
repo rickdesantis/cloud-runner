@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,10 +38,10 @@ import it.cloud.CloudService;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
 import it.cloud.amazon.Configuration;
-import it.cloud.amazon.ec2.VirtualMachine.FirewallRule;
-import it.cloud.amazon.ec2.VirtualMachine.InstanceStatus;
+import it.cloud.amazon.ec2.Instance.InstanceStatus;
 import it.cloud.utils.CloudException;
 import it.cloud.utils.ConfigurationFile;
+import it.cloud.utils.FirewallRule;
 
 public class AmazonEC2 implements CloudService {
 	
@@ -60,27 +59,7 @@ public class AmazonEC2 implements CloudService {
 		return client;
 	}
 	
-	private static List<FirewallRule> firewallRules;
 	static {
-		firewallRules = new ArrayList<FirewallRule>();
-
-		try (Scanner sc = new Scanner(
-				Configuration.getInputStream(Configuration.FIREWALL_RULES));) {
-			if (sc.hasNextLine())
-				sc.nextLine();
-
-			while (sc.hasNextLine()) {
-				String line = sc.nextLine();
-				String[] fields = line.split(",");
-				try {
-					firewallRules.add(new FirewallRule(fields[0], Integer
-							.valueOf(fields[1]), Integer.valueOf(fields[2]),
-							fields[3]));
-				} catch (Exception e) {
-				}
-			}
-		}
-
 		createSecurityGroup();
 	}
 
@@ -106,7 +85,7 @@ public class AmazonEC2 implements CloudService {
 
 		ArrayList<IpPermission> ipPermissions = new ArrayList<IpPermission>();
 
-		for (FirewallRule rule : firewallRules) {
+		for (FirewallRule rule : FirewallRule.rules) {
 			IpPermission ipPermission = new IpPermission();
 			ipPermission.setIpProtocol(rule.protocol);
 			ipPermission.setFromPort(new Integer(rule.from));
@@ -278,7 +257,7 @@ public class AmazonEC2 implements CloudService {
 		List<SpotInstanceRequest> reqs = spotResult.getSpotInstanceRequests();
 		for (int i = 0; i < reqs.size() && vm.getInstancesNeeded() > vm.getInstancesRunning(); ++i) {
 			SpotInstanceRequest req = reqs.get(i);
-			InstanceStatus status = it.cloud.amazon.ec2.VirtualMachine.Instance.getInstanceStatus(req.getInstanceId());
+			InstanceStatus status = it.cloud.amazon.ec2.Instance.getInstanceStatus(req.getInstanceId());
 			if (status == InstanceStatus.OK)
 				vm.addRunningInstance(req.getInstanceId(), req.getSpotInstanceRequestId());
 		}
@@ -300,7 +279,7 @@ public class AmazonEC2 implements CloudService {
 			List<com.amazonaws.services.ec2.model.Instance> instances = req.getInstances();
 			for (int j = 0; j < instances.size() && vm.getInstancesNeeded() > vm.getInstancesRunning(); ++j) {
 				com.amazonaws.services.ec2.model.Instance instance = instances.get(j);
-				InstanceStatus status = it.cloud.amazon.ec2.VirtualMachine.Instance.getInstanceStatus(instance.getInstanceId());
+				InstanceStatus status = it.cloud.amazon.ec2.Instance.getInstanceStatus(instance.getInstanceId());
 				if (status == InstanceStatus.OK)
 					vm.addRunningInstance(instance.getInstanceId(), null);
 			}

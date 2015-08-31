@@ -23,15 +23,19 @@ public abstract class ConfigurationFile {
 	private static final Logger logger = LoggerFactory.getLogger(ConfigurationFile.class);
 	
 	protected String prefixToString = "";
+	
+	private static String DEFAULT_CONFIGURATION_FILE = Configuration.CONFIGURATION;
 
 	public static ConfigurationFile parse() throws FileNotFoundException, IOException {
-		return parse(Configuration.getPathToFile(Configuration.CONFIGURATION));
+		return parse(Configuration.getPathToFile(DEFAULT_CONFIGURATION_FILE));
 	}
 	
 	public static ConfigurationFile parse(Path p) throws FileNotFoundException, IOException {
 		try {
 			JSONFile file = new JSONFile(p);
 			return file;
+		} catch (org.json.JSONException jsone) {
+			throw new IOException("Error while parsing the JSON file.", jsone);
 		} catch (Exception e) {
 			PropertiesFile file = new PropertiesFile(p);
 			return file;
@@ -241,7 +245,7 @@ public abstract class ConfigurationFile {
 	public static class JSONFile extends ConfigurationFile {
 		private JSONObject obj;
 		
-		public JSONFile(Path p) throws IOException {
+		public JSONFile(Path p) throws Exception {
 			this(new JSONObject(FileUtils.readFileToString(p.toFile())));
 		}
 		
@@ -370,9 +374,7 @@ public abstract class ConfigurationFile {
 		Path json = Paths.get("/Users/ft/Development/workspace-s4c/modaclouds-tests/modaclouds-scalingsdatests/resources/configuration.json");
 		ConfigurationFile conf = ConfigurationFile.parse(json);
 		
-		logger.debug("\n{}", conf.getElement("machines").getElement("lb").toString());
-		
-		logger.debug("\n{}", conf.getElement("providers").toString());
+		logger.debug("\n{}", conf.getElement("machines").getElement("httpagent-mod").toString());
 	}
 
 }
