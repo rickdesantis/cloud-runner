@@ -103,8 +103,6 @@ public class Instance extends it.cloud.Instance {
 			id = req.getInstanceId();
 			return SpotState.valueFromRequest(req);
 		} else {
-			logger.error("No spot request found for the given id ("
-					+ spotRequestId + ").");
 			return SpotState.SPOT_REQUEST_NOT_FOUND;
 		}
 	}
@@ -130,7 +128,6 @@ public class Instance extends it.cloud.Instance {
 		if (reqs.size() > 0)
 			return InstanceStatus.valueFromStatus(reqs.get(0));
 		else {
-			logger.error("No instance found for the given id (" + id + ").");
 			return InstanceStatus.INSTANCE_NOT_FOUND;
 		}
 	}
@@ -151,7 +148,6 @@ public class Instance extends it.cloud.Instance {
 			instanceRes = client
 					.describeInstanceStatus(instanceReq);
 		} catch (Exception e) {
-			logger.error("No instance found for the given id (" + id + ").");
 			return InstanceStatus.INSTANCE_NOT_FOUND;
 		}
 
@@ -160,7 +156,6 @@ public class Instance extends it.cloud.Instance {
 		if (reqs.size() > 0)
 			return InstanceStatus.valueFromStatus(reqs.get(0));
 		else {
-			logger.error("No instance found for the given id (" + id + ").");
 			return InstanceStatus.INSTANCE_NOT_FOUND;
 		}
 	}
@@ -218,7 +213,7 @@ public class Instance extends it.cloud.Instance {
 
 		if (spotState != SpotState.ACTIVE) {
 			if (spotState == SpotState.SPOT_REQUEST_NOT_FOUND && id != null) {
-				logger.debug("Spot request not found, but maybe you started it as an on demand instance...");
+//				logger.debug("Spot request not found, but maybe you started it as an on demand instance...");
 			} else {
 				logger.error("The spot request failed to start and is in the "
 						+ spotState.getState() + " state!");

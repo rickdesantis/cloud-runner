@@ -270,7 +270,7 @@ public class Jsch extends Ssh {
 
 			session.disconnect();
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("Error while receiving the file.", e);
 			try {
 				if (fos != null)
 					fos.close();
@@ -360,7 +360,7 @@ public class Jsch extends Ssh {
 			session.disconnect();
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("Error while sending the file.", e);
 			try {
 				if (fis != null)
 					fis.close();
@@ -384,10 +384,10 @@ public class Jsch extends Ssh {
 				sb.append((char) c);
 			} while (c != '\n');
 			if (b == 1) { // error
-				System.out.print(sb.toString());
+				logger.error("Error: " + sb.toString());
 			}
 			if (b == 2) { // fatal error
-				System.out.print(sb.toString());
+				logger.error("Fatal error: " + sb.toString());
 			}
 		}
 		return b;

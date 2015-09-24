@@ -17,14 +17,51 @@
 -->
 <configuration>
 	<statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+	
+	<contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+        <!-- reset all previous level configurations of all j.u.l. loggers -->
+        <resetJUL>true</resetJUL>
+    </contextListener>
+    
+    <evaluator name="DISP_CALLER_EVAL">
+        <expression>level >= WARN</expression>
+    </evaluator>
 
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator>
+                <expression>
+                    level >= WARN
+                </expression>
+            </evaluator>
+            <OnMismatch>NEUTRAL</OnMismatch>
+            <OnMatch>DENY</OnMatch>
+        </filter>
 		<target>System.out</target>
+		<withJansi>true</withJansi>
 		<encoder>
-			<pattern>%d{HH:mm:ss} [CloudRunner] %m%n
+			<pattern>%d{HH:mm:ss} [%highlight(CloudRunner)] %m%n
 			</pattern>
 		</encoder>
 	</appender>
+	
+	<appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator>
+                <expression>
+                    level >= WARN
+                </expression>
+            </evaluator>
+            <OnMismatch>DENY</OnMismatch>
+            <OnMatch>NEUTRAL</OnMatch>
+        </filter>
+        <target>System.err</target>
+        <withJansi>true</withJansi>
+        <encoder>
+            <pattern>%d{HH:mm:ss} [%highlight(CloudRunner)] %m%n%caller{5}
+            </pattern>
+        </encoder>
+    </appender>
 
 	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<prudent>true</prudent>
@@ -35,7 +72,7 @@
 		</rollingPolicy>
 
 		<encoder>
-			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n%caller{5, DISP_CALLER_EVAL}
 			</pattern>
 		</encoder>
 	</appender>
@@ -52,6 +89,7 @@
 
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />
+		<appender-ref ref="STDERR" />
 	</root>
 	
 	<root level="TRACE">

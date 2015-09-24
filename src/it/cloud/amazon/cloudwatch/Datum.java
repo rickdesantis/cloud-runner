@@ -72,7 +72,9 @@ public class Datum implements Comparable<Datum> {
 	
 	@Override
 	public String toString() {
-		return this.getClass().getName() + "[timestamp: " + timestamp + ", metric: " + metric + ", statistic: " + statistic + ", value: " + value + ", unit: " + unit + "]";
+		return String.format(
+				"%s[timestamp: %d, metric: %s, statistic: %s, value: %f, unit: %s]",
+				this.getClass().getName(), timestamp, metric, statistic, value, unit);
 	}
 	
 	public static String getCSVHeader() {
@@ -80,7 +82,9 @@ public class Datum implements Comparable<Datum> {
 	}
 	
 	public String toCSV() {
-		return timestamp + "," + metric + "," + statistic + "," + doubleFormatter.format(value) + "," + unit;
+		return String.format(
+				"%d,%s,%s,%s,%s",
+				timestamp, metric, statistic, doubleFormatter.format(value), unit);
 	}
 
 	@Override

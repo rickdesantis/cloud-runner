@@ -4,7 +4,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -20,6 +19,7 @@ import it.cloud.amazon.Configuration;
 
 public abstract class ConfigurationFile {
 	
+	@SuppressWarnings("unused")
 	private static final Logger logger = LoggerFactory.getLogger(ConfigurationFile.class);
 	
 	protected String prefixToString = "";
@@ -368,13 +368,6 @@ public abstract class ConfigurationFile {
 				return this;
 			}
 		}
-	}
-	
-	public static void main(String[] args) throws Exception {
-		Path json = Paths.get("/Users/ft/Development/workspace-s4c/modaclouds-tests/modaclouds-scalingsdatests/resources/configuration.json");
-		ConfigurationFile conf = ConfigurationFile.parse(json);
-		
-		logger.debug("\n{}", conf.getElement("machines").getElement("httpagent-mod").toString());
 	}
 
 }

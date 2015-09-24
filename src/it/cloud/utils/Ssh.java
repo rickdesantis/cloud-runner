@@ -1,5 +1,7 @@
 package it.cloud.utils;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -11,7 +13,7 @@ import it.cloud.Configuration;
 import it.cloud.Instance;
 import it.cloud.VirtualMachine;
 import it.cloud.utils.ssh.FakeSsh;
-import it.cloud.utils.ssh.Jsch;
+import it.cloud.utils.ssh.Sshj;
 
 public abstract class Ssh {
 
@@ -150,7 +152,7 @@ public abstract class Ssh {
 		logger.debug("File `{}` sent to {} in {}", lfile, ip, Utilities.durationToString(duration));
 	}
 
-	protected static Class<? extends Ssh> usedImplementation = Jsch.class;
+	protected static Class<? extends Ssh> usedImplementation = Sshj.class;
 
 	public static void setImplementation(Class<? extends Ssh> usedImplementation) {
 		Ssh.usedImplementation = usedImplementation;
@@ -161,6 +163,32 @@ public abstract class Ssh {
 		setImplementation(FakeSsh.class);
 		
 		Ssh.execInBackground("ip", "user", "password", "key", "command");
+	}
+	
+	public void localSendFile(String lfile, String rfile) throws Exception {
+		if (!new File(lfile).exists())
+			throw new FileNotFoundException("File " + lfile + " not found!");
+		
+		if (new File(rfile).exists() && new File(rfile).isDirectory() && !rfile.endsWith(File.separator))
+			rfile = rfile + File.separator;
+		
+		String command = String.format("cp %s %s", lfile, rfile);
+		Local.exec(command);
+	}
+	
+	public void localReceiveFile(String lfile, String rfile) throws Exception {
+		if (!new File(rfile).exists())
+			throw new FileNotFoundException("File " + rfile + " not found!");
+		
+		if (new File(lfile).exists() && new File(lfile).isDirectory() && !lfile.endsWith(File.separator))
+			lfile = lfile + File.separator;
+		
+		String command = String.format("cp %s %s", rfile, lfile);
+		Local.exec(command);
+	}
+	
+	public List<String> localExec(String command) throws Exception {
+		return Local.exec(command);
 	}
 
 }

@@ -43,8 +43,7 @@ public class RestClient {
 			throws Exception {
 		Client client = new Client(new Context(), Protocol.HTTP);
 
-		ClientResource request = new ClientResource("http://" + ip + ":" + port
-				+ path);
+		ClientResource request = new ClientResource(String.format("http://%s:%d%s", ip, port, path));
 
 		Representation representation = null;
 		Status status = null;
@@ -82,8 +81,7 @@ public class RestClient {
 			throws Exception {
 		Client client = new Client(new Context(), Protocol.HTTP);
 
-		ClientResource request = new ClientResource("http://" + ip + ":" + port
-				+ path);
+		ClientResource request = new ClientResource(String.format("http://%s:%d%s", ip, port, path));
 
 		Representation representation = null;
 		String answer = null;
