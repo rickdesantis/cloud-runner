@@ -241,6 +241,32 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 
 		instancesSet.add(new Instance(this, id, spotRequestId));
 	}
+	
+	public static void retrieveMetrics(String localPath, Date date, int period, Statistic statistic, StandardUnit unit, VirtualMachine vm, String... ids) throws Exception {
+		String metricsToBeGet = vm.getParameter("METRICS");
+		if (metricsToBeGet != null)
+			retrieveMetrics(metricsToBeGet.split(";"), localPath, date, period, statistic, unit, vm, ids);
+	}
+	
+	public static void retrieveMetrics(String[] metricsToBeGet, String localPath, Date date, int period, Statistic statistic, StandardUnit unit, VirtualMachine vm, String... ids) throws Exception {
+		if (ids.length == 0)
+			return;
+		
+		int count = 1;
+		String name = vm.getParameter("NAME");
+		
+		if (metricsToBeGet != null && metricsToBeGet.length > 0)
+			for (String id : ids) {
+				for (String s : metricsToBeGet) {
+					Path file = Paths.get(localPath, name + count, s + ".csv");
+					file.toFile().getParentFile().mkdirs();
+
+					CloudWatch.writeInstanceMetricToFile(file, s, id, date, period, statistic, unit);
+				}
+
+				count++;
+			}
+	}
 
 	public void retrieveMetrics(String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
 		String metricsToBeGet = getParameter("METRICS");
