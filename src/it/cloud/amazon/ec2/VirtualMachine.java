@@ -242,6 +242,25 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 		instancesSet.add(new Instance(this, id, spotRequestId));
 	}
 	
+	private static int getSuggestedPeriod(Date date) {
+		Date now = new Date();
+		double diff = now.getTime() - date.getTime();
+		diff /= 1000 * 60;
+		final int maxData = 1440;
+
+		double res = diff / maxData;
+		res = Math.ceil(res);
+
+		if (res < 1)
+			res = 1;
+
+		return (int)res * 60;
+	}
+	
+	public static void retrieveMetrics(String localPath, Date date, VirtualMachine vm, String... ids) throws Exception {
+		retrieveMetrics(localPath, date, getSuggestedPeriod(date), Statistic.Average, null, vm, ids);
+	}
+	
 	public static void retrieveMetrics(String localPath, Date date, int period, Statistic statistic, StandardUnit unit, VirtualMachine vm, String... ids) throws Exception {
 		String metricsToBeGet = vm.getParameter("METRICS");
 		if (metricsToBeGet != null)
@@ -266,6 +285,10 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 
 				count++;
 			}
+	}
+	
+	public void retrieveMetrics(String localPath, Date date) throws Exception {
+		retrieveMetrics(localPath, date, getSuggestedPeriod(date), Statistic.Average, null);
 	}
 
 	public void retrieveMetrics(String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
