@@ -117,7 +117,7 @@ public abstract class Ssh {
 		receiveFile(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), lfile, rfile);
 	}
 
-	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile)
+	private static void receiveSingleFile(String ip, String user, String password, String key, String lfile, String rfile)
 			throws Exception {
 		long init = System.currentTimeMillis();
 		
@@ -128,6 +128,31 @@ public abstract class Ssh {
 
 		long duration = System.currentTimeMillis() - init;
 		logger.debug("File `{}` received from {} in {}", rfile, ip, Utilities.durationToString(duration));
+	}
+	
+	public static void receiveFile(String ip, String user, String password, String key, String lfile, String rfile)
+			throws Exception {
+		if (rfile.contains("*")) {
+			String lsFiles = String.format("ls -lLp %s | awk '{ out=$9; for(i=10;i<=NF;i++) {out=out\" \"$i}; print out }' | grep --color=no '^/'", rfile);
+			List<String> res = exec(ip, user, password, key, lsFiles);
+			for (String s : res) {
+				if (s.startsWith("/")) {
+					String[] partsRfile = rfile.split("[*]");
+					String[] partsLfile = lfile.split("[*]");
+					int j = 0, k = 0;
+					String actualLfile = partsLfile[0];
+					for (int i = 0; i+1 < partsRfile.length; ++i) {
+						j = s.indexOf(partsRfile[i], j) + partsRfile[i].length();
+						k = s.indexOf(partsRfile[i+1], j);
+						String subst = s.substring(j, k);
+						actualLfile += subst + partsLfile[i+1];
+					}
+					receiveSingleFile(ip, user, password, key, actualLfile, s);
+				}
+			}
+		} else {
+			receiveSingleFile(ip, user, password, key, lfile, rfile);
+		}
 	}
 
 	public static void sendFile(String ip, VirtualMachine vm, String lfile, String rfile) throws Exception {
