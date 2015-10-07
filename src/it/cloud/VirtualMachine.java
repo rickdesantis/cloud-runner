@@ -144,8 +144,42 @@ public abstract class VirtualMachine {
 					i.receiveFile(Paths.get(localPath, i.getName() + count, fileName).toString(), actualRemotePath);
 				}
 
-				count++;
+				++count;
 			}
+	}
+	
+	public static void retrieveFiles(List<String> ids, VirtualMachine vm, String localPath, String remotePath) throws Exception {
+		String filesToBeGet = vm.getParameter("RETRIEVE_FILES");
+		if (filesToBeGet != null)
+			retrieveFiles(ids, vm, filesToBeGet.split(";"), localPath, remotePath);
+	}
+	
+	public static void retrieveFiles(List<String> ids, VirtualMachine vm, String[] filesToBeGet, String localPath, String remotePath) throws Exception {
+		if (filesToBeGet != null && filesToBeGet.length > 0) {
+			int count = 1;
+			
+			for (String id : ids) {
+				String ip = vm.getIp(id);
+				
+				for (String s : filesToBeGet) {
+					String actualRemotePath;
+					if (s.startsWith("/"))
+						actualRemotePath = s;
+					else
+						actualRemotePath = Paths.get(remotePath, s).toString();
+	
+					String fileName = s;
+					if (s.startsWith("/"))
+						fileName = s.substring(1);
+	
+					Paths.get(localPath, vm.name + count, fileName).toFile().getParentFile().mkdirs();
+	
+					Ssh.receiveFile(ip, vm, Paths.get(localPath, vm.name + count, fileName).toString(), actualRemotePath);
+				}
+				
+				++count;
+			}
+		}
 	}
 	
 	public static void retrieveFiles(String ip, VirtualMachine vm, int count, String localPath, String remotePath) throws Exception {
@@ -272,4 +306,6 @@ public abstract class VirtualMachine {
 	public static final String SSH_USER_KEY = "SSH_user";
 	public static final String SSH_PASS_KEY = "SSH_pass";
 	public static final String PROVIDER_KEY = "provider";
+
+	public abstract String getIp(String id);
 }

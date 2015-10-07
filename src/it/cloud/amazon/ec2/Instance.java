@@ -62,6 +62,16 @@ public class Instance extends it.cloud.Instance {
 			if (id == null)
 				return null;
 		}
+		
+		ip = getIp(id);
+
+		return ip;
+	}
+	
+	public static String getIp(String id) {
+		if (id == null) {
+			return null;
+		}
 
 		com.amazonaws.services.ec2.AmazonEC2 client = AmazonEC2.connect();
 
@@ -73,12 +83,13 @@ public class Instance extends it.cloud.Instance {
 		DescribeInstancesResult instanceRes = client
 				.describeInstances(instanceReq);
 
+		String ip = null;
+		
 		try {
 			ip = instanceRes.getReservations().get(0).getInstances().get(0)
 					.getPublicIpAddress();
 		} catch (Exception e) {
 			logger.error("Error while getting the IP.", e);
-			ip = null;
 		}
 
 		return ip;

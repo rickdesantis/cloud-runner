@@ -16,4 +16,9 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 		throw new RuntimeException("Method not implemented.");
 	}
 
+	@Override
+	public String getIp(String id) {
+		throw new RuntimeException("Method not implemented.");
+	}
+
 }

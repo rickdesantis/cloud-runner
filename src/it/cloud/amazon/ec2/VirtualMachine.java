@@ -257,18 +257,18 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 		return (int)res * 60;
 	}
 	
-	public static void retrieveMetrics(String localPath, Date date, VirtualMachine vm, String... ids) throws Exception {
-		retrieveMetrics(localPath, date, getSuggestedPeriod(date), Statistic.Average, null, vm, ids);
+	public static void retrieveMetrics(List<String> ids, VirtualMachine vm, String localPath, Date date) throws Exception {
+		retrieveMetrics(ids, vm, localPath, date, getSuggestedPeriod(date), Statistic.Average, null);
 	}
 	
-	public static void retrieveMetrics(String localPath, Date date, int period, Statistic statistic, StandardUnit unit, VirtualMachine vm, String... ids) throws Exception {
+	public static void retrieveMetrics(List<String> ids, VirtualMachine vm, String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
 		String metricsToBeGet = vm.getParameter("METRICS");
 		if (metricsToBeGet != null)
-			retrieveMetrics(metricsToBeGet.split(";"), localPath, date, period, statistic, unit, vm, ids);
+			retrieveMetrics(ids, vm, metricsToBeGet.split(";"), localPath, date, period, statistic, unit);
 	}
 	
-	public static void retrieveMetrics(String[] metricsToBeGet, String localPath, Date date, int period, Statistic statistic, StandardUnit unit, VirtualMachine vm, String... ids) throws Exception {
-		if (ids.length == 0)
+	public static void retrieveMetrics(List<String> ids, VirtualMachine vm, String[] metricsToBeGet, String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		if (ids.size() == 0)
 			return;
 		
 		int count = 1;
@@ -283,7 +283,7 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 					CloudWatch.writeInstanceMetricToFile(file, s, id, date, period, statistic, unit);
 				}
 
-				count++;
+				++count;
 			}
 	}
 	
@@ -308,8 +308,13 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 					CloudWatch.writeInstanceMetricToFile(file, s, i.id, date, period, statistic, unit);
 				}
 
-				count++;
+				++count;
 			}
+	}
+	
+	@Override
+	public String getIp(String id) {
+		return Instance.getIp(id);
 	}
 
 }
