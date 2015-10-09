@@ -56,18 +56,33 @@ public abstract class Ssh {
 	public static List<String> exec(Instance inst, String command) throws Exception {
 		return exec(inst.getIp(), inst.getSshUser(), inst.getSshPassword(), inst.getKey().toString(), command);
 	}
+	
+	public static final int MAX_ATTEMPTS = 5;
 
 	@SuppressWarnings("unchecked")
 	public static List<String> exec(String ip, String user, String password, String key, String command)
 			throws Exception {
-		List<String> res;
+		List<String> res = null;
 
 		long init = System.currentTimeMillis();
 		
 		Constructor<? extends Ssh> c = usedImplementation.getConstructor(String.class, String.class, String.class, String.class);
 		Ssh instance = c.newInstance(ip, user, password, key);
 		Method m = usedImplementation.getMethod("exec", String.class);
-		res = (List<String>) m.invoke(instance, command);
+		boolean goOn = true;
+		int attempt = 0;
+		while (goOn) {
+			try {
+				++attempt;
+				res = (List<String>) m.invoke(instance, command);
+				goOn = false;
+			} catch (Exception e) {
+				if (attempt >= MAX_ATTEMPTS)
+					throw e;
+				logger.info("Trying again in 10 seconds...");
+				try { Thread.sleep(10000); } catch (Exception ex) { }
+			}
+		}
 
 		long duration = System.currentTimeMillis() - init;
 		logger.debug("Executed `{}` on {} in {}", command, ip, Utilities.durationToString(duration));
