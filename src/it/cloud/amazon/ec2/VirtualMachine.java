@@ -315,5 +315,11 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 	public String getIp(String id) {
 		return Instance.getIp(id);
 	}
+	
+	@Override
+	public void terminate(String id) {
+		Instance i = new Instance(this, id, null);
+		i.terminate();
+	}
 
 }

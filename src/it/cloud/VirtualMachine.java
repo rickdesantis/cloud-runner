@@ -308,4 +308,7 @@ public abstract class VirtualMachine {
 	public static final String PROVIDER_KEY = "provider";
 
 	public abstract String getIp(String id);
+	
+	public abstract void terminate(String id);
+	
 }
