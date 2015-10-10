@@ -272,12 +272,11 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 			return;
 		
 		int count = 1;
-		String name = vm.getParameter("NAME");
 		
 		if (metricsToBeGet != null && metricsToBeGet.length > 0)
 			for (String id : ids) {
 				for (String s : metricsToBeGet) {
-					Path file = Paths.get(localPath, name + count, s + ".csv");
+					Path file = Paths.get(localPath, vm.name + count, s + ".csv");
 					file.toFile().getParentFile().mkdirs();
 
 					CloudWatch.writeInstanceMetricToFile(file, s, id, date, period, statistic, unit);
