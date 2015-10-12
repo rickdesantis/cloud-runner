@@ -275,12 +275,7 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 		
 		if (metricsToBeGet != null && metricsToBeGet.length > 0)
 			for (String id : ids) {
-				for (String s : metricsToBeGet) {
-					Path file = Paths.get(localPath, vm.name + count, s + ".csv");
-					file.toFile().getParentFile().mkdirs();
-
-					CloudWatch.writeInstanceMetricToFile(file, s, id, date, period, statistic, unit);
-				}
+				retrieveMetrics(id, vm, count, metricsToBeGet, localPath, date, period, statistic, unit);
 
 				++count;
 			}
@@ -300,14 +295,29 @@ public class VirtualMachine extends it.cloud.VirtualMachine {
 		int count = 1;
 		if (metricsToBeGet != null && metricsToBeGet.length > 0)
 			for (it.cloud.Instance i : instancesSet) {
-				for (String s : metricsToBeGet) {
-					Path file = Paths.get(localPath, i.getName() + count, s + ".csv");
-					file.toFile().getParentFile().mkdirs();
-
-					CloudWatch.writeInstanceMetricToFile(file, s, i.id, date, period, statistic, unit);
-				}
+				retrieveMetrics(i.id, this, count, metricsToBeGet, localPath, date, period, statistic, unit);
 
 				++count;
+			}
+	}
+	
+	public static void retrieveMetrics(String id, VirtualMachine vm, int count, String localPath, Date date) throws Exception {
+		retrieveMetrics(id, vm, count, localPath, date, getSuggestedPeriod(date), Statistic.Average, null);
+	}
+	
+	public static void retrieveMetrics(String id, VirtualMachine vm, int count, String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		String metricsToBeGet = vm.getParameter("METRICS");
+		if (metricsToBeGet != null)
+			retrieveMetrics(id, vm, count, metricsToBeGet.split(";"), localPath, date, period, statistic, unit);
+	}
+	
+	public static void retrieveMetrics(String id, VirtualMachine vm, int count, String[] metricsToBeGet, String localPath, Date date, int period, Statistic statistic, StandardUnit unit) throws Exception {
+		if (metricsToBeGet != null && metricsToBeGet.length > 0)
+			for (String s : metricsToBeGet) {
+				Path file = Paths.get(localPath, vm.name + count, s + ".csv");
+				file.toFile().getParentFile().mkdirs();
+
+				CloudWatch.writeInstanceMetricToFile(file, s, id, date, period, statistic, unit);
 			}
 	}
 	
