@@ -125,61 +125,17 @@ public abstract class VirtualMachine {
 	}
 
 	public void retrieveFiles(String[] filesToBeGet, String localPath, String remotePath) throws Exception {
-		List<Thread> threads = new ArrayList<Thread>();
-		
 		if (filesToBeGet != null && filesToBeGet.length > 0) {
 			int count = 1;
-			
+		
 			for (Instance i : instancesSet) {
-				threads.add(retrieveFiles(i.getIp(), this, filesToBeGet, localPath, remotePath, count));
+				String ip = i.getIp();
+				
+				retrieveFiles(ip, i.vm, count, filesToBeGet, localPath, remotePath);
+
 				++count;
 			}
-			
-			for (Thread t : threads) {
-				try {
-					t.join();
-				} catch (Exception e) {
-					logger.error("Error while joining the thread.", e);
-				}
-			}
 		}
-	}
-	
-	private static Thread retrieveFiles(String ip, VirtualMachine vm, String[] filesToBeGet, String localPath, String remotePath, int count) {
-		final int fcount = count;
-		final String[] ffilesToBeGet = filesToBeGet;
-		final String fremotePath = remotePath;
-		final String flocalPath = localPath;
-		final VirtualMachine fvm = vm;
-		final String fip = ip;
-		
-		Thread t = new Thread() {
-			public void run() {
-				if (ffilesToBeGet != null && ffilesToBeGet.length > 0) {
-						for (String s : ffilesToBeGet) {
-							String actualRemotePath;
-							if (s.startsWith("/"))
-								actualRemotePath = s;
-							else
-								actualRemotePath = Paths.get(fremotePath, s).toString();
-			
-							String fileName = s;
-							if (s.startsWith("/"))
-								fileName = s.substring(1);
-			
-							Paths.get(flocalPath, fvm.name + fcount, fileName).toFile().getParentFile().mkdirs();
-			
-							try {
-								Ssh.receiveFile(fip, fvm, Paths.get(flocalPath, fvm.name + fcount, fileName).toString(), actualRemotePath);
-							} catch (Exception e) {
-								logger.error("Error while receiving the file.", e);
-							}
-						}
-					}
-			}
-		};
-		t.start();
-		return t;
 	}
 	
 	public static void retrieveFiles(List<String> ids, VirtualMachine vm, String localPath, String remotePath) throws Exception {
@@ -189,22 +145,15 @@ public abstract class VirtualMachine {
 	}
 	
 	public static void retrieveFiles(List<String> ids, VirtualMachine vm, String[] filesToBeGet, String localPath, String remotePath) throws Exception {
-		List<Thread> threads = new ArrayList<Thread>();
-		
 		if (filesToBeGet != null && filesToBeGet.length > 0) {
 			int count = 1;
 			
 			for (String id : ids) {
-				threads.add(retrieveFiles(vm.getIp(id), vm, filesToBeGet, localPath, remotePath, count));
+				String ip = vm.getIp(id);
+				
+				retrieveFiles(ip, vm, count, filesToBeGet, localPath, remotePath);
+				
 				++count;
-			}
-		}
-		
-		for (Thread t : threads) {
-			try {
-				t.join();
-			} catch (Exception e) {
-				logger.error("Error while joining the thread.", e);
 			}
 		}
 	}
